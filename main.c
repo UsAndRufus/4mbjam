@@ -21,11 +21,38 @@
 #define WINDOW_WIDTH (BOARD_SIZE + BORDER*3 + SIDEBAR_WIDTH)
 #define WINDOW_HEIGHT (BOARD_SIZE + BORDER*2)
 
+void initBoard(Rectangle cellRecs[TOTAL_CELLS]) {
+    // Fills cellRecs data (for every rectangle)
+    for (int i = 0; i < TOTAL_CELLS; i++) {
+        cellRecs[i].x = BORDER + CELL_SIZE * (i % CELLS) + (i % CELLS);
+        cellRecs[i].y = BORDER + 1 + CELL_SIZE * (i / CELLS) + (i / CELLS);
+        cellRecs[i].width = CELL_SIZE;
+        cellRecs[i].height = CELL_SIZE;
+    }
+}
+
 void drawGrid() {
     for (int i = BORDER; i <= BOARD_BOUNDARY; i += CELL_SIZE + 1) {
         DrawLine(i, BORDER, i, BOARD_BOUNDARY, SKYBLUE);
         DrawLine(BORDER, i, BOARD_BOUNDARY - 1, i, SKYBLUE);
     }
+}
+
+void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS]) {
+    drawGrid();
+  
+    for (int i = 0; i < TOTAL_CELLS; i++) {
+        if (cellState[i])
+        {
+            DrawRectangleRec(cellRecs[i], LIME);
+        }
+    }
+}
+
+void drawSidebar() {
+    DrawRectangle(SIDEBAR_X, SIDEBAR_Y, SIDEBAR_WIDTH, SIDEBAR_HEIGHT, SKYBLUE);
+        
+    DrawFPS(SIDEBAR_INNER_X,SIDEBAR_INNER_Y);
 }
 
 
@@ -37,15 +64,9 @@ int main(void) {
 
     Rectangle cellRecs[TOTAL_CELLS] = { 0 };     // Rectangles array
 
-    // Fills cellRecs data (for every rectangle)
-    for (int i = 0; i < TOTAL_CELLS; i++) {
-        cellRecs[i].x = BORDER + CELL_SIZE * (i % CELLS) + (i % CELLS);
-        cellRecs[i].y = BORDER + 1 + CELL_SIZE * (i / CELLS) + (i / CELLS);
-        cellRecs[i].width = CELL_SIZE;
-        cellRecs[i].height = CELL_SIZE;
-    }
+    initBoard(cellRecs);
     
-    int cellState[TOTAL_CELLS] = { 0 };           // Cell state: 0-DEFAULT, 1-MOUSE_HOVER
+    int cellState[TOTAL_CELLS] = { 0 };          // Cell state: 0-DEFAULT, 1-MOUSE_HOVER
 
     Vector2 mousePoint = { 0.0f, 0.0f };
 
@@ -74,21 +95,8 @@ int main(void) {
 
             ClearBackground(DARKBLUE);
 
-            // Board
-            drawGrid();
-            
-            for (int i = 0; i < TOTAL_CELLS; i++) {
-                if (cellState[i])
-                {
-                    DrawRectangleRec(cellRecs[i], LIME);
-                }
-            }
-            
-            // Sidebar
-            DrawRectangle(SIDEBAR_X, SIDEBAR_Y, SIDEBAR_WIDTH, SIDEBAR_HEIGHT, SKYBLUE);
-            
-            DrawFPS(SIDEBAR_INNER_X,SIDEBAR_INNER_Y);
-            
+            drawBoard(cellRecs, cellState);
+            drawSidebar();
 
         EndDrawing();
         //----------------------------------------------------------------------------------
