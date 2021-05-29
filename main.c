@@ -15,8 +15,8 @@ Ruleset initRuleset() {
     
     ruleset.colors[0] = playerColors[rand() % ARR_SIZE(playerColors)];
     
+    // ensure player 2's colour is different
     Color color2 = ruleset.colors[0];
-    
     while (ColorToInt(color2) == ColorToInt(ruleset.colors[0])) {
         color2 = playerColors[rand() % ARR_SIZE(playerColors)];
         ruleset.colors[1] = color2;
@@ -36,11 +36,21 @@ void initBoard(Rectangle cellRecs[TOTAL_CELLS]) {
 }
 
 void initPieces(Ruleset ruleset, Piece cellPieces[TOTAL_CELLS]) {
-    for (int p = 0; p < 2 * ruleset.numberOfPieces; p++) {
-        Piece piece;
-        piece.player = p % 2;
-        piece.color = ruleset.colors[piece.player];
-        cellPieces[p] = piece;
+    int position = 0;
+    for (int p = 0; p < ruleset.numberOfPieces; p++) {
+        int sides = (rand() % 3) + 3; // sides in range 3-6
+        
+        printf("sides: %d", sides);
+        
+        for (int player = 0; player < 2; player++) {
+            Piece piece = {
+                player,
+                ruleset.colors[piece.player],
+                sides
+            };
+            cellPieces[position] = piece;
+            position++;
+        }
     }
 }
 
@@ -55,12 +65,17 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
     drawGrid();
   
     for (int i = 0; i < TOTAL_CELLS; i++) {
-        DrawRectangleRec(cellRecs[i], cellPieces[i].color);
+        // DrawRectangleRec(cellRecs[i], cellPieces[i].color);
+        
+        // void DrawPoly(Vector2 center, int sides, float radius, float rotation, Color color);
         
         if (cellState[i] != 0)
         {
             DrawRectangleRec(cellRecs[i], LIME);
         }
+        
+        Vector2 center = { cellRecs[i].x + HALF_CELL_SIZE, cellRecs[i].y + HALF_CELL_SIZE };
+        DrawPoly(center, cellPieces[i].sides, PIECE_RADIUS, 180, cellPieces[i].color);
     }
 }
 

@@ -6,15 +6,20 @@ typedef struct Ruleset {
 typedef struct Piece {
     int player;
     Color color;
+    int sides; // polygon sides
 } Piece;
 
 // Board
 #define CELLS 6
 #define TOTAL_CELLS (CELLS * CELLS)
 #define CELL_SIZE 100
+#define HALF_CELL_SIZE (CELL_SIZE / 2)
 #define BOARD_SIZE ((CELLS * CELL_SIZE) + (CELLS + 1))
 #define BOARD_BOUNDARY (BOARD_SIZE + BORDER)
 #define BORDER 20
+
+// Pieces
+#define PIECE_RADIUS ((0.8 * CELL_SIZE) - HALF_CELL_SIZE)
 
 // Sidebar
 #define SIDEBAR_WIDTH 200
