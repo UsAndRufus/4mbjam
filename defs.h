@@ -24,7 +24,11 @@ typedef struct Piece {
 #define PADDING 10
 #define SIDEBAR_INNER_X (SIDEBAR_X + PADDING)
 #define SIDEBAR_INNER_Y (SIDEBAR_Y + PADDING)
+#define SIDEBAR_LINE_HEIGHT 40
 
 // Window
 #define WINDOW_WIDTH (BOARD_SIZE + BORDER*3 + SIDEBAR_WIDTH)
 #define WINDOW_HEIGHT (BOARD_SIZE + BORDER*2)
+
+// Utility
+#define ARR_SIZE(arr) ( sizeof((arr)) / sizeof((arr[0])) )

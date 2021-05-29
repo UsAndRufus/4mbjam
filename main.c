@@ -1,13 +1,27 @@
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "raylib.h"
 #include "defs.h"
 
 Ruleset initRuleset() {
+    
+    static Color playerColors[] = {VIOLET, MAROON, DARKGREEN, PINK, PURPLE, BEIGE};
+    
     Ruleset ruleset = {
         2,
         {VIOLET, MAROON}
     };
+    
+    ruleset.colors[0] = playerColors[rand() % ARR_SIZE(playerColors)];
+    
+    Color color2 = ruleset.colors[0];
+    
+    while (ColorToInt(color2) == ColorToInt(ruleset.colors[0])) {
+        color2 = playerColors[rand() % ARR_SIZE(playerColors)];
+        ruleset.colors[1] = color2;
+    }
+    
     return ruleset;
 }
 
@@ -50,10 +64,15 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
     }
 }
 
-void drawSidebar() {
+void drawSidebar(char *seed_str) {
     DrawRectangle(SIDEBAR_X, SIDEBAR_Y, SIDEBAR_WIDTH, SIDEBAR_HEIGHT, SKYBLUE);
+    
+    int y = SIDEBAR_INNER_Y;
         
-    DrawFPS(SIDEBAR_INNER_X,SIDEBAR_INNER_Y);
+    DrawFPS(SIDEBAR_INNER_X, y);
+    y += SIDEBAR_LINE_HEIGHT;
+    
+    DrawText(seed_str, SIDEBAR_INNER_X, y, 20, LIME); 
 }
 
 
@@ -63,8 +82,21 @@ int main(void) {
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "4mb game");
     
+    // seed gen
+    
+    const int SEED = time(0) % 10000;
+    srand(SEED);
+    
+    int length = snprintf(NULL, 0,"%d", SEED) + 1;
+    char seed_str[length];
+    snprintf(seed_str, length, "%d", SEED);
+    
+    // Ruleset
+    
     Ruleset ruleset = initRuleset();
     printf("number of pieces: %d\n", ruleset.numberOfPieces);
+    
+    // Board
 
     Rectangle cellRecs[TOTAL_CELLS] = { 0 };     // Rectangles array
     int cellState[TOTAL_CELLS] = { 0 };          // Cell state: 0-DEFAULT, 1-MOUSE_HOVER
@@ -102,7 +134,7 @@ int main(void) {
 
             drawBoard(cellRecs, cellState, cellPieces);
             
-            drawSidebar();
+            drawSidebar(seed_str);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
