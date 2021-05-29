@@ -1,25 +1,15 @@
+#include <stdio.h>
+
 #include "raylib.h"
+#include "defs.h"
 
-// Board
-#define CELLS 6
-#define TOTAL_CELLS (CELLS * CELLS)
-#define CELL_SIZE 100
-#define BOARD_SIZE ((CELLS * CELL_SIZE) + (CELLS + 1))
-#define BOARD_BOUNDARY (BOARD_SIZE + BORDER)
-#define BORDER 20
-
-// Sidebar
-#define SIDEBAR_WIDTH 200
-#define SIDEBAR_HEIGHT BOARD_SIZE
-#define SIDEBAR_X (BOARD_BOUNDARY + BORDER)
-#define SIDEBAR_Y BORDER
-#define PADDING 10
-#define SIDEBAR_INNER_X (SIDEBAR_X + PADDING)
-#define SIDEBAR_INNER_Y (SIDEBAR_Y + PADDING)
-
-// Window
-#define WINDOW_WIDTH (BOARD_SIZE + BORDER*3 + SIDEBAR_WIDTH)
-#define WINDOW_HEIGHT (BOARD_SIZE + BORDER*2)
+Ruleset initRuleset() {
+    Ruleset ruleset = {
+        2,
+        {VIOLET, MAROON}
+    };
+    return ruleset;
+}
 
 void initBoard(Rectangle cellRecs[TOTAL_CELLS]) {
     // Fills cellRecs data (for every rectangle)
@@ -31,6 +21,15 @@ void initBoard(Rectangle cellRecs[TOTAL_CELLS]) {
     }
 }
 
+void initPieces(Ruleset ruleset, Piece cellPieces[TOTAL_CELLS]) {
+    for (int p = 0; p < 2 * ruleset.numberOfPieces; p++) {
+        Piece piece;
+        piece.player = p % 2;
+        piece.color = ruleset.colors[piece.player];
+        cellPieces[p] = piece;
+    }
+}
+
 void drawGrid() {
     for (int i = BORDER; i <= BOARD_BOUNDARY; i += CELL_SIZE + 1) {
         DrawLine(i, BORDER, i, BOARD_BOUNDARY, SKYBLUE);
@@ -38,11 +37,13 @@ void drawGrid() {
     }
 }
 
-void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS]) {
+void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece cellPieces[TOTAL_CELLS]) {
     drawGrid();
   
     for (int i = 0; i < TOTAL_CELLS; i++) {
-        if (cellState[i])
+        DrawRectangleRec(cellRecs[i], cellPieces[i].color);
+        
+        if (cellState[i] != 0)
         {
             DrawRectangleRec(cellRecs[i], LIME);
         }
@@ -61,12 +62,17 @@ int main(void) {
     //--------------------------------------------------------------------------------------
 
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "4mb game");
+    
+    Ruleset ruleset = initRuleset();
+    printf("number of pieces: %d\n", ruleset.numberOfPieces);
 
     Rectangle cellRecs[TOTAL_CELLS] = { 0 };     // Rectangles array
+    int cellState[TOTAL_CELLS] = { 0 };          // Cell state: 0-DEFAULT, 1-MOUSE_HOVER
 
     initBoard(cellRecs);
     
-    int cellState[TOTAL_CELLS] = { 0 };          // Cell state: 0-DEFAULT, 1-MOUSE_HOVER
+    Piece cellPieces[TOTAL_CELLS] = { 0 };
+    initPieces(ruleset, cellPieces);
 
     Vector2 mousePoint = { 0.0f, 0.0f };
 
@@ -85,7 +91,6 @@ int main(void) {
             else cellState[i] = 0;
         }
         
-        // printf("x: %f; y: %f\n", mousePoint.x, mousePoint.y);
 
         //----------------------------------------------------------------------------------
 
@@ -95,7 +100,8 @@ int main(void) {
 
             ClearBackground(DARKBLUE);
 
-            drawBoard(cellRecs, cellState);
+            drawBoard(cellRecs, cellState, cellPieces);
+            
             drawSidebar();
 
         EndDrawing();
