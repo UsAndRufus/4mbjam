@@ -9,7 +9,7 @@ Ruleset initRuleset() {
     static Color playerColors[] = {VIOLET, MAROON, DARKGREEN, PINK, PURPLE, BEIGE};
     
     Ruleset ruleset = {
-        2,
+        3,
         {VIOLET, MAROON}
     };
     
@@ -36,11 +36,20 @@ void initBoard(Rectangle cellRecs[TOTAL_CELLS]) {
 }
 
 void initPieces(Ruleset ruleset, Piece cellPieces[TOTAL_CELLS]) {
-    int position = 0;
+    int positions[TOTAL_CELLS] = {0};
+    
     for (int p = 0; p < ruleset.numberOfPieces; p++) {
         int sides = (rand() % 3) + 3; // sides in range 3-6
         
-        printf("sides: %d", sides);
+        // Get unique position
+        int position;
+        for (;;) {
+            position = rand() % HOME_CELLS;
+            if (positions[position] == 0) {
+                break;
+            }
+        }
+        positions[position] = 1;
         
         for (int player = 0; player < 2; player++) {
             Piece piece = {
@@ -48,6 +57,13 @@ void initPieces(Ruleset ruleset, Piece cellPieces[TOTAL_CELLS]) {
                 ruleset.colors[piece.player],
                 sides
             };
+            
+            // rotate positions
+            if (player == 1) {
+                position = TOTAL_CELLS - position;
+            }
+            
+            
             cellPieces[position] = piece;
             position++;
         }
@@ -65,17 +81,13 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
     drawGrid();
   
     for (int i = 0; i < TOTAL_CELLS; i++) {
-        // DrawRectangleRec(cellRecs[i], cellPieces[i].color);
-        
-        // void DrawPoly(Vector2 center, int sides, float radius, float rotation, Color color);
-        
         if (cellState[i] != 0)
         {
             DrawRectangleRec(cellRecs[i], LIME);
         }
         
         Vector2 center = { cellRecs[i].x + HALF_CELL_SIZE, cellRecs[i].y + HALF_CELL_SIZE };
-        DrawPoly(center, cellPieces[i].sides, PIECE_RADIUS, 180, cellPieces[i].color);
+        DrawPoly(center, cellPieces[i].sides, PIECE_RADIUS, 180 * (cellPieces[i].player), cellPieces[i].color);
     }
 }
 
@@ -87,7 +99,7 @@ void drawSidebar(char *seed_str) {
     DrawFPS(SIDEBAR_INNER_X, y);
     y += SIDEBAR_LINE_HEIGHT;
     
-    DrawText(seed_str, SIDEBAR_INNER_X, y, 20, LIME); 
+    DrawText(seed_str, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
 }
 
 
