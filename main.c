@@ -4,22 +4,36 @@
 #include "raylib.h"
 #include "defs.h"
 
+PieceDef generatePieceDef() {
+    int sides = (rand() % 3) + 3; // sides in range 3-6
+    PieceDef pieceDef = {
+        sides
+    };
+    return pieceDef;
+}
+
 Ruleset initRuleset() {
     
     static Color playerColors[] = {VIOLET, MAROON, DARKGREEN, PINK, PURPLE, BEIGE};
     
     Ruleset ruleset = {
-        3,
-        {VIOLET, MAROON}
+        N_PIECES,
+        {VIOLET, MAROON},
+        {}
     };
     
     ruleset.colors[0] = playerColors[rand() % ARR_SIZE(playerColors)];
     
     // ensure player 2's colour is different
+    // should generalise a method for choose with no repeats
     Color color2 = ruleset.colors[0];
     while (ColorToInt(color2) == ColorToInt(ruleset.colors[0])) {
         color2 = playerColors[rand() % ARR_SIZE(playerColors)];
         ruleset.colors[1] = color2;
+    }
+    
+    for (int i = 0; i < ruleset.numberOfPieces; i++) {
+        ruleset.pieceDefs[i] = generatePieceDef();
     }
     
     return ruleset;
@@ -35,12 +49,10 @@ void initBoard(Rectangle cellRecs[TOTAL_CELLS]) {
     }
 }
 
-void initPieces(Ruleset ruleset, Piece cellPieces[TOTAL_CELLS]) {
+void initPieces(Ruleset ruleset, Piece pieces[]) {
     int positions[TOTAL_CELLS] = {0};
     
-    for (int p = 0; p < ruleset.numberOfPieces; p++) {
-        int sides = (rand() % 3) + 3; // sides in range 3-6
-        
+    for (int pieceDef = 0; pieceDef < ruleset.numberOfPieces; pieceDef++) {
         // Get unique position
         int position;
         for (;;) {
@@ -52,20 +64,21 @@ void initPieces(Ruleset ruleset, Piece cellPieces[TOTAL_CELLS]) {
         positions[position] = 1;
         
         for (int player = 0; player < 2; player++) {
-            Piece piece = {
-                player,
-                ruleset.colors[piece.player],
-                sides
-            };
-            
             // rotate positions
             if (player == 1) {
-                position = TOTAL_CELLS - position;
+                position = TOTAL_CELLS - position - 1;
             }
             
+            Piece piece = {
+                position,
+                player,
+                pieceDef
+            };
             
-            cellPieces[position] = piece;
-            position++;
+            int i = pieceDef + (player * ruleset.numberOfPieces);
+            
+            
+            pieces[i] = piece;
         }
     }
 }
@@ -77,7 +90,7 @@ void drawGrid() {
     }
 }
 
-void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece cellPieces[TOTAL_CELLS]) {
+void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece pieces[], Ruleset ruleset) {
     drawGrid();
   
     for (int i = 0; i < TOTAL_CELLS; i++) {
@@ -85,9 +98,16 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
         {
             DrawRectangleRec(cellRecs[i], LIME);
         }
+    }
+    
+    for (int p = 0; p < ruleset.numberOfPieces * 2; p++) {
+        Piece piece = pieces[p];
+        int cell = piece.position;
+        PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
         
-        Vector2 center = { cellRecs[i].x + HALF_CELL_SIZE, cellRecs[i].y + HALF_CELL_SIZE };
-        DrawPoly(center, cellPieces[i].sides, PIECE_RADIUS, 180 * (cellPieces[i].player), cellPieces[i].color);
+        Vector2 center = { cellRecs[cell].x + HALF_CELL_SIZE, cellRecs[cell].y + HALF_CELL_SIZE };
+        DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
+        
     }
 }
 
@@ -130,8 +150,8 @@ int main(void) {
 
     initBoard(cellRecs);
     
-    Piece cellPieces[TOTAL_CELLS] = { 0 };
-    initPieces(ruleset, cellPieces);
+    Piece pieces[ruleset.numberOfPieces];
+    initPieces(ruleset, pieces);
 
     Vector2 mousePoint = { 0.0f, 0.0f };
 
@@ -159,7 +179,7 @@ int main(void) {
 
             ClearBackground(DARKBLUE);
 
-            drawBoard(cellRecs, cellState, cellPieces);
+            drawBoard(cellRecs, cellState, pieces, ruleset);
             
             drawSidebar(seed_str);
 

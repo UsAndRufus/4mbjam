@@ -1,14 +1,3 @@
-typedef struct Ruleset {
-    int numberOfPieces; // per player - symmetric game
-    Color colors[2]; // player colours
-} Ruleset;
-
-typedef struct Piece {
-    int player;
-    Color color;
-    int sides; // polygon sides
-} Piece;
-
 // Board
 #define CELLS 6
 #define TOTAL_CELLS (CELLS * CELLS)
@@ -20,6 +9,7 @@ typedef struct Piece {
 #define BORDER 20
 
 // Pieces
+#define N_PIECES 3 // at some point this should be dynamic
 #define PIECE_RADIUS ((0.8 * CELL_SIZE) - HALF_CELL_SIZE)
 
 // Sidebar
@@ -39,3 +29,21 @@ typedef struct Piece {
 
 // Utility
 #define ARR_SIZE(arr) ( sizeof((arr)) / sizeof((arr[0])) )
+
+
+// Structs
+typedef struct Piece {
+    int position;
+    int player;
+    int pieceDef; // Index into array of piece definitons in Ruleset
+} Piece;
+
+typedef struct PieceDef {
+    int sides; // polygon sides
+} PieceDef;
+
+typedef struct Ruleset {
+    int numberOfPieces; // per player - symmetric game
+    Color colors[2]; // player colours
+    PieceDef pieceDefs[N_PIECES];
+} Ruleset;
