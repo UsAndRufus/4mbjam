@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 #include "raylib.h"
 #include "utility.h"
@@ -90,27 +91,32 @@ void drawGrid() {
     }
 }
 
-// will have to do some maths anyway to work out what angle to draw arrowhead
-void drawArrow(Vector2 start, int xAdd, int yAdd, Color color) {
-    Vector2 end = { start.x + xAdd, start.y + yAdd };
+void drawArrow(Vector2 start, double angle, double length, Color color) {
+    float x = (float) (length * cos(angle));
+    float y = (float) (length * sin(angle));
     
-    DrawLineEx(start, end, 5, LIME);
+    // Have to add start vector to computed result because we need to move the result vector to be near the start vector
+    Vector2 end = { start.x + x, start.y + y };
+    
+    DrawLineEx(start, end, 5, color);
+    float arrowheadAngle = (float) (RAD2DEG * (angle + 67.5d));
+    DrawPoly(end, 3, 9, arrowheadAngle, color); 
 }
 
 void drawMovementHint(PieceDef pieceDef, Vector2 center) {
     switch(pieceDef.movementDirection) {
         case OMNI: 
         case ORTHOGONAL:
-            drawArrow(center, 0, CELL_SIZE, LIME);
-            drawArrow(center, 0, -CELL_SIZE, LIME);
-            drawArrow(center, CELL_SIZE, 0, LIME);
-            drawArrow(center, -CELL_SIZE, 0, LIME);
+            for (double a = 0; a < 2 * PI ; a += PI  / 2) {
+                drawArrow(center, a, CELL_SIZE, LIME);
+            }
+            
             if (pieceDef.movementDirection == ORTHOGONAL) break; // fall through if omni
         case DIAGONAL:
-            drawArrow(center, CELL_SIZE, CELL_SIZE, LIME);
-            drawArrow(center, CELL_SIZE, -CELL_SIZE, LIME);
-            drawArrow(center, -CELL_SIZE, CELL_SIZE, LIME);
-            drawArrow(center, -CELL_SIZE, -CELL_SIZE, LIME);
+            for (double a = 0; a < 2 * PI; a += PI / 2) {
+                drawArrow(center, a + PI / 4, CELL_SIZE, LIME);
+            }
+            
             break;
     }
 }
