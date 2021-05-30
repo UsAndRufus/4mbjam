@@ -13,8 +13,11 @@ void generatePieceDefs(Ruleset *ruleset) {
     for (int i = 0; i < ruleset->numberOfPieceDefs; i++) {
         // could define an alternate version of choose that defines a floor, but this is fine
         int sides = chosenSides[i] + 3; // sides in range 3-6
+        MovementDirection movementDirection = rand() % MOVEMENT_DIRECTION_COUNT;
+        
         PieceDef pieceDef = {
-            sides
+            sides,
+            movementDirection
         };
         ruleset->pieceDefs[i] = pieceDef;
     }
@@ -87,6 +90,31 @@ void drawGrid() {
     }
 }
 
+// will have to do some maths anyway to work out what angle to draw arrowhead
+void drawArrow(Vector2 start, int xAdd, int yAdd, Color color) {
+    Vector2 end = { start.x + xAdd, start.y + yAdd };
+    
+    DrawLineEx(start, end, 5, LIME);
+}
+
+void drawMovementHint(PieceDef pieceDef, Vector2 center) {
+    switch(pieceDef.movementDirection) {
+        case OMNI: 
+        case ORTHOGONAL:
+            drawArrow(center, 0, CELL_SIZE, LIME);
+            drawArrow(center, 0, -CELL_SIZE, LIME);
+            drawArrow(center, CELL_SIZE, 0, LIME);
+            drawArrow(center, -CELL_SIZE, 0, LIME);
+            if (pieceDef.movementDirection == ORTHOGONAL) break; // fall through if omni
+        case DIAGONAL:
+            drawArrow(center, CELL_SIZE, CELL_SIZE, LIME);
+            drawArrow(center, CELL_SIZE, -CELL_SIZE, LIME);
+            drawArrow(center, -CELL_SIZE, CELL_SIZE, LIME);
+            drawArrow(center, -CELL_SIZE, -CELL_SIZE, LIME);
+            break;
+    }
+}
+
 void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece pieces[], Ruleset ruleset) {
     drawGrid();
   
@@ -103,8 +131,12 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
         PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
         
         Vector2 center = { cellRecs[cell].x + HALF_CELL_SIZE, cellRecs[cell].y + HALF_CELL_SIZE };
-        DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
         
+        if (cellState[cell] != 0) {
+            drawMovementHint(pieceDef, center);
+        }
+        
+        DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
     }
 }
 

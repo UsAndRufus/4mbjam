@@ -27,16 +27,25 @@
 #define WINDOW_WIDTH (BOARD_SIZE + BORDER*3 + SIDEBAR_WIDTH)
 #define WINDOW_HEIGHT (BOARD_SIZE + BORDER*2)
 
-// Structs
+// Structs & enums
+typedef enum {
+    ORTHOGONAL,
+    DIAGONAL,
+    OMNI
+} MovementDirection;
+#define MOVEMENT_DIRECTION_COUNT 3
+
+typedef struct PieceDef {
+    int sides; // polygon sides
+    MovementDirection movementDirection;
+    // int movementLength;
+} PieceDef;
+
 typedef struct Piece {
     int position;
     int player;
     int pieceDef; // Index into array of piece definitons in Ruleset
 } Piece;
-
-typedef struct PieceDef {
-    int sides; // polygon sides
-} PieceDef;
 
 typedef struct Ruleset {
     int numberOfPieceDefs; 
