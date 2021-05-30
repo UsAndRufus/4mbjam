@@ -3,14 +3,21 @@
 #include <time.h>
 
 #include "raylib.h"
+#include "utility.h"
 #include "defs.h"
 
-PieceDef generatePieceDef() {
-    int sides = (rand() % 3) + 3; // sides in range 3-6
-    PieceDef pieceDef = {
-        sides
-    };
-    return pieceDef;
+void generatePieceDefs(Ruleset *ruleset) {
+    int chosenSides[ruleset->numberOfPieceDefs];
+    choose(chosenSides, ruleset->numberOfPieceDefs, 4);
+    
+    for (int i = 0; i < ruleset->numberOfPieceDefs; i++) {
+        // could define an alternate version of choose that defines a floor, but this is fine
+        int sides = chosenSides[i] + 3; // sides in range 3-6
+        PieceDef pieceDef = {
+            sides
+        };
+        ruleset->pieceDefs[i] = pieceDef;
+    }
 }
 
 Ruleset initRuleset() {
@@ -19,24 +26,19 @@ Ruleset initRuleset() {
     
     Ruleset ruleset = {
         N_PIECE_DEFS,
-        N_PIECE_DEFS * 2,
+        N_PIECE_DEFS * 2, // total number of pieces
         {VIOLET, MAROON},
         {}
     };
     
-    ruleset.colors[0] = playerColors[rand() % ARR_SIZE(playerColors)];
+    // Can implement a chooseColors function at some point if we need to do more of this
+    int colorIds[2];
+    choose(colorIds, 2, ARR_SIZE(playerColors));
     
-    // ensure player 2's colour is different
-    // should generalise a method for choose with no repeats
-    Color color2 = ruleset.colors[0];
-    while (ColorToInt(color2) == ColorToInt(ruleset.colors[0])) {
-        color2 = playerColors[rand() % ARR_SIZE(playerColors)];
-        ruleset.colors[1] = color2;
-    }
-    
-    for (int i = 0; i < ruleset.numberOfPieceDefs; i++) {
-        ruleset.pieceDefs[i] = generatePieceDef();
-    }
+    ruleset.colors[0] = playerColors[colorIds[0]];
+    ruleset.colors[1] = playerColors[colorIds[1]];
+       
+    generatePieceDefs(&ruleset);
     
     return ruleset;
 }
@@ -51,19 +53,12 @@ void initBoard(Rectangle cellRecs[TOTAL_CELLS]) {
     }
 }
 
-void initPieces(Ruleset ruleset, Piece pieces[]) {
-    int positions[TOTAL_CELLS] = {0};
+void initPieces(Ruleset ruleset, Piece pieces[]) {    
+    int positions[ruleset.numberOfPieceDefs];
+    choose(positions, ruleset.numberOfPieceDefs, HOME_CELLS);
     
     for (int pieceDef = 0; pieceDef < ruleset.numberOfPieceDefs; pieceDef++) {
-        // Get unique position
-        int position;
-        for (;;) {
-            position = rand() % HOME_CELLS;
-            if (positions[position] == 0) {
-                break;
-            }
-        }
-        positions[position] = 1;
+        int position = positions[pieceDef];
         
         for (int player = 0; player < 2; player++) {
             // rotate positions
@@ -136,9 +131,9 @@ int main(void) {
     const int SEED = time(0) % 10000;
     srand(SEED);
     
-    int length = snprintf(NULL, 0,"%d", SEED) + 1;
+    int length = snprintf(NULL, 0,"SEED: %d", SEED) + 1;
     char seed_str[length];
-    snprintf(seed_str, length, "%d", SEED);
+    snprintf(seed_str, length, "SEED: %d", SEED);
     
     // Ruleset
     
@@ -177,7 +172,7 @@ int main(void) {
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
-
+        
             ClearBackground(DARKBLUE);
 
             drawBoard(cellRecs, cellState, pieces, ruleset);

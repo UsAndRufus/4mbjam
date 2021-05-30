@@ -1,7 +1,7 @@
 // Board
 #define CELLS 6
 #define TOTAL_CELLS (CELLS * CELLS)
-#define HOME_CELLS (CELLS * 2);
+#define HOME_CELLS (CELLS * 2)
 #define CELL_SIZE 100
 #define HALF_CELL_SIZE (CELL_SIZE / 2)
 #define BOARD_SIZE ((CELLS * CELL_SIZE) + (CELLS + 1))
@@ -26,10 +26,6 @@
 // Window
 #define WINDOW_WIDTH (BOARD_SIZE + BORDER*3 + SIDEBAR_WIDTH)
 #define WINDOW_HEIGHT (BOARD_SIZE + BORDER*2)
-
-// Utility
-#define ARR_SIZE(arr) ( sizeof((arr)) / sizeof((arr[0])) )
-
 
 // Structs
 typedef struct Piece {
