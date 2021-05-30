@@ -9,7 +9,7 @@
 #define BORDER 20
 
 // Pieces
-#define N_PIECES 3 // at some point this should be dynamic
+#define N_PIECE_DEFS 3 // at some point this should be dynamic
 #define PIECE_RADIUS ((0.8 * CELL_SIZE) - HALF_CELL_SIZE)
 
 // Sidebar
@@ -43,7 +43,8 @@ typedef struct PieceDef {
 } PieceDef;
 
 typedef struct Ruleset {
-    int numberOfPieces; // per player - symmetric game
+    int numberOfPieceDefs; 
+    int numberOfPieces; // all pieces across both players
     Color colors[2]; // player colours
-    PieceDef pieceDefs[N_PIECES];
+    PieceDef pieceDefs[N_PIECE_DEFS];
 } Ruleset;

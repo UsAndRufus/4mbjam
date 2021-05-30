@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "raylib.h"
 #include "defs.h"
@@ -17,7 +18,8 @@ Ruleset initRuleset() {
     static Color playerColors[] = {VIOLET, MAROON, DARKGREEN, PINK, PURPLE, BEIGE};
     
     Ruleset ruleset = {
-        N_PIECES,
+        N_PIECE_DEFS,
+        N_PIECE_DEFS * 2,
         {VIOLET, MAROON},
         {}
     };
@@ -32,7 +34,7 @@ Ruleset initRuleset() {
         ruleset.colors[1] = color2;
     }
     
-    for (int i = 0; i < ruleset.numberOfPieces; i++) {
+    for (int i = 0; i < ruleset.numberOfPieceDefs; i++) {
         ruleset.pieceDefs[i] = generatePieceDef();
     }
     
@@ -52,7 +54,7 @@ void initBoard(Rectangle cellRecs[TOTAL_CELLS]) {
 void initPieces(Ruleset ruleset, Piece pieces[]) {
     int positions[TOTAL_CELLS] = {0};
     
-    for (int pieceDef = 0; pieceDef < ruleset.numberOfPieces; pieceDef++) {
+    for (int pieceDef = 0; pieceDef < ruleset.numberOfPieceDefs; pieceDef++) {
         // Get unique position
         int position;
         for (;;) {
@@ -75,7 +77,7 @@ void initPieces(Ruleset ruleset, Piece pieces[]) {
                 pieceDef
             };
             
-            int i = pieceDef + (player * ruleset.numberOfPieces);
+            int i = pieceDef + (player * ruleset.numberOfPieceDefs);
             
             
             pieces[i] = piece;
@@ -100,7 +102,7 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
         }
     }
     
-    for (int p = 0; p < ruleset.numberOfPieces * 2; p++) {
+    for (int p = 0; p < ruleset.numberOfPieces; p++) {
         Piece piece = pieces[p];
         int cell = piece.position;
         PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
@@ -141,7 +143,6 @@ int main(void) {
     // Ruleset
     
     Ruleset ruleset = initRuleset();
-    printf("number of pieces: %d\n", ruleset.numberOfPieces);
     
     // Board
 
