@@ -99,8 +99,8 @@ void drawArrow(Vector2 start, double angle, double length, Color color) {
     Vector2 end = { start.x + x, start.y + y };
     
     DrawLineEx(start, end, 5, color);
-    float arrowheadAngle = (float) (RAD2DEG * (angle + 67.5d));
-    DrawPoly(end, 3, 9, arrowheadAngle, color); 
+    float arrowheadAngle = 30 + (float) (RAD2DEG * angle);
+    DrawPoly(end, 3, 20, arrowheadAngle, color);
 }
 
 void drawMovementHint(PieceDef pieceDef, Vector2 center) {
@@ -166,7 +166,8 @@ int main(void) {
     
     // seed gen
     
-    const int SEED = time(0) % 10000;
+    // const int SEED = time(0) % 10000;
+    const int SEED = 6274;
     srand(SEED);
     
     int length = snprintf(NULL, 0,"SEED: %d", SEED) + 1;
