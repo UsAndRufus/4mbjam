@@ -161,12 +161,11 @@ void drawMovementHint(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[
 
 void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset) {
     drawGrid();
+    
+    int selected = -1;
   
     for (int cell = 0; cell < TOTAL_CELLS; cell++) {
-        if (cellState[cell])
-        {
-            DrawRectangleRec(cellRecs[cell], LIME);
-        }
+        if (cellState[cell]) selected = cell;
         
         Piece piece = pieces[cell];
         
@@ -174,16 +173,6 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
         
         if (piece.present) {
             PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
-            
-            
-            
-            if (cellState[cell]) {
-                int validMoves[TOTAL_CELLS] = { 0 };
-                
-                validMovesFor(pieceDef, cell, validMoves, pieces);
-                
-                drawMovementHint(center, validMoves, cellRecs);
-            }
             
             DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
         }
@@ -194,6 +183,25 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
         // snprintf(cell_str, length, "%d", cell);
         
         // DrawText(cell_str, center.x, center.y, TEXT_SIZE, WHITE); 
+    }
+    
+    // Draw selected piece so we can draw hints over the top of other pieces
+    if (selected != - 1) {
+        DrawRectangleRec(cellRecs[selected], LIME);
+        Piece piece = pieces[selected];
+        
+        if (piece.present) {
+            PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
+            
+            int validMoves[TOTAL_CELLS] = { 0 };
+            
+            validMovesFor(pieceDef, selected, validMoves, pieces);
+            
+            Vector2 center = cellCenter(cellRecs[selected]);
+            
+            drawMovementHint(center, validMoves, cellRecs);
+            DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
+        }
     }
 }
 
