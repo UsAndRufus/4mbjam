@@ -7,6 +7,8 @@
 #include "utility.h"
 #include "defs.h"
 
+// init and generation
+
 void generatePieceDefs(Ruleset *ruleset) {
     int chosenSides[ruleset->numberOfPieceDefs];
     choose(chosenSides, ruleset->numberOfPieceDefs, 4);
@@ -68,21 +70,54 @@ void initPieces(Ruleset ruleset, Piece pieces[]) {
             // rotate positions
             if (player == 1) {
                 position = TOTAL_CELLS - position - 1;
-            }
+            }        
             
-            Piece piece = {
-                position,
+            pieces[position] = (Piece) {
+                1, // present
                 player,
                 pieceDef
             };
-            
-            int i = pieceDef + (player * ruleset.numberOfPieceDefs);
-            
-            
-            pieces[i] = piece;
         }
     }
 }
+
+// Logic
+int cellOnBoard(int cell) {
+    return cell >= 0 && cell < TOTAL_CELLS;
+}
+
+
+// This needs to return a variable length array
+// We could just continue to calculate in the drawMovementHint function BUT this function will be useful for the bot and checking whether a player's move is valid
+// BUT if piece will never have more than 8 moves... we could just have an array initialised to size 8, elements at -1?
+void validMovesFor(PieceDef pieceDef, int cell, int moves[TOTAL_CELLS], Piece pieces[TOTAL_CELLS]) {
+    switch(pieceDef.movementDirection) {
+        case OMNI: 
+        case ORTHOGONAL:
+            // up and down
+            if (cellOnBoard(cell - CELLS)) moves[cell - CELLS] = 1;
+            if (cellOnBoard(cell + CELLS)) moves[cell + CELLS] = 1;
+            
+            // left and right
+            if (cell % CELLS != 0) moves[cell - 1] = 1;
+            if ((cell + 1) % CELLS != 0) moves[cell + 1] = 1;
+            
+            if (pieceDef.movementDirection == ORTHOGONAL) break; // fall through if omni
+        case DIAGONAL:
+            // left-up and left-down
+            if (cell % CELLS != 0 && cellOnBoard(cell - CELLS - 1)) moves[cell - CELLS - 1] = 1;
+            if (cell % CELLS != 0 && cellOnBoard(cell + CELLS - 1)) moves[cell + CELLS - 1] = 1;
+            
+            // right-up and right-down
+            if ((cell + 1) % CELLS != 0 && cellOnBoard(cell - CELLS + 1)) moves[cell - CELLS + 1] = 1;
+            if ((cell + 1) % CELLS != 0 && cellOnBoard(cell + CELLS + 1)) moves[cell + CELLS + 1] = 1;
+            
+            break;
+    }
+}
+
+
+// Drawing
 
 void drawGrid() {
     for (int i = BORDER; i <= BOARD_BOUNDARY; i += CELL_SIZE + 1) {
@@ -100,7 +135,7 @@ void drawArrow(Vector2 start, double angle, double length, Color color) {
     
     DrawLineEx(start, end, 5, color);
     float arrowheadAngle = 30 + (float) (RAD2DEG * angle);
-    DrawPoly(end, 3, 20, arrowheadAngle, color);
+    DrawPoly(end, 3, 10, arrowheadAngle, color);
 }
 
 void drawMovementHint(PieceDef pieceDef, Vector2 center) {
@@ -121,28 +156,60 @@ void drawMovementHint(PieceDef pieceDef, Vector2 center) {
     }
 }
 
-void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece pieces[], Ruleset ruleset) {
-    drawGrid();
-  
-    for (int i = 0; i < TOTAL_CELLS; i++) {
-        if (cellState[i] != 0)
-        {
-            DrawRectangleRec(cellRecs[i], LIME);
+void drawArrowV(Vector2 start, Vector2 end, Color color) {
+    DrawLineEx(start, end, 5, color);
+}
+
+Vector2 cellCenter(Rectangle cellRec) {
+    return (Vector2) { cellRec.x + HALF_CELL_SIZE, cellRec.y + HALF_CELL_SIZE };
+}
+
+void drawMovementHint2(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[TOTAL_CELLS]) {
+    for (int c = 0; c < TOTAL_CELLS; c++) {
+        if (moves[c]) {
+            Vector2 end = cellCenter(cellRecs[c]);
+            drawArrowV(start, end, LIME);
+            DrawCircleV(end, 10, LIME);
         }
     }
-    
-    for (int p = 0; p < ruleset.numberOfPieces; p++) {
-        Piece piece = pieces[p];
-        int cell = piece.position;
-        PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
-        
-        Vector2 center = { cellRecs[cell].x + HALF_CELL_SIZE, cellRecs[cell].y + HALF_CELL_SIZE };
-        
-        if (cellState[cell] != 0) {
-            drawMovementHint(pieceDef, center);
+}
+
+void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset) {
+    drawGrid();
+  
+    for (int cell = 0; cell < TOTAL_CELLS; cell++) {
+        if (cellState[cell])
+        {
+            DrawRectangleRec(cellRecs[cell], LIME);
         }
         
-        DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
+        Piece piece = pieces[cell];
+        
+        Vector2 center = cellCenter(cellRecs[cell]);
+        
+        if (piece.present) {
+            PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
+            
+            
+            
+            if (cellState[cell]) {
+                int validMoves[TOTAL_CELLS] = { 0 };
+                
+                validMovesFor(pieceDef, cell, validMoves, pieces);
+                
+                drawMovementHint2(center, validMoves, cellRecs);
+                
+                // drawMovementHint(pieceDef, center);
+            }
+            
+            DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
+        }
+        
+        int length = snprintf(NULL, 0,"%d", cell) + 1;
+        char cell_str[length];
+        snprintf(cell_str, length, "%d", cell);
+        
+        DrawText(cell_str, center.x, center.y, TEXT_SIZE, WHITE); 
     }
 }
 
@@ -185,7 +252,7 @@ int main(void) {
 
     initBoard(cellRecs);
     
-    Piece pieces[ruleset.numberOfPieces];
+    Piece pieces[TOTAL_CELLS] = {0};
     initPieces(ruleset, pieces);
 
     Vector2 mousePoint = { 0.0f, 0.0f };

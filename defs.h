@@ -42,7 +42,7 @@ typedef struct PieceDef {
 } PieceDef;
 
 typedef struct Piece {
-    int position;
+    int present; // flag to say if piece is present in  array
     int player;
     int pieceDef; // Index into array of piece definitons in Ruleset
 } Piece;
