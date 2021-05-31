@@ -138,38 +138,23 @@ void drawArrow(Vector2 start, double angle, double length, Color color) {
     DrawPoly(end, 3, 10, arrowheadAngle, color);
 }
 
-void drawMovementHint(PieceDef pieceDef, Vector2 center) {
-    switch(pieceDef.movementDirection) {
-        case OMNI: 
-        case ORTHOGONAL:
-            for (double a = 0; a < 2 * PI ; a += PI  / 2) {
-                drawArrow(center, a, CELL_SIZE, LIME);
-            }
-            
-            if (pieceDef.movementDirection == ORTHOGONAL) break; // fall through if omni
-        case DIAGONAL:
-            for (double a = 0; a < 2 * PI; a += PI / 2) {
-                drawArrow(center, a + PI / 4, CELL_SIZE, LIME);
-            }
-            
-            break;
-    }
-}
-
 void drawArrowV(Vector2 start, Vector2 end, Color color) {
     DrawLineEx(start, end, 5, color);
+    
+    double angle = atan2(end.y - start.y, end.x - start.x);
+    float arrowheadAngle = 30 + (float) (RAD2DEG * angle);
+    
+    DrawPoly(end, 3, 10, arrowheadAngle, color);
 }
 
 Vector2 cellCenter(Rectangle cellRec) {
     return (Vector2) { cellRec.x + HALF_CELL_SIZE, cellRec.y + HALF_CELL_SIZE };
 }
 
-void drawMovementHint2(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[TOTAL_CELLS]) {
+void drawMovementHint(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[TOTAL_CELLS]) {
     for (int c = 0; c < TOTAL_CELLS; c++) {
         if (moves[c]) {
-            Vector2 end = cellCenter(cellRecs[c]);
-            drawArrowV(start, end, LIME);
-            DrawCircleV(end, 10, LIME);
+            drawArrowV(start, cellCenter(cellRecs[c]), LIME);
         }
     }
 }
@@ -197,19 +182,18 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
                 
                 validMovesFor(pieceDef, cell, validMoves, pieces);
                 
-                drawMovementHint2(center, validMoves, cellRecs);
-                
-                // drawMovementHint(pieceDef, center);
+                drawMovementHint(center, validMoves, cellRecs);
             }
             
             DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
         }
         
-        int length = snprintf(NULL, 0,"%d", cell) + 1;
-        char cell_str[length];
-        snprintf(cell_str, length, "%d", cell);
+        // Draw cell numbers
+        // int length = snprintf(NULL, 0,"%d", cell) + 1;
+        // char cell_str[length];
+        // snprintf(cell_str, length, "%d", cell);
         
-        DrawText(cell_str, center.x, center.y, TEXT_SIZE, WHITE); 
+        // DrawText(cell_str, center.x, center.y, TEXT_SIZE, WHITE); 
     }
 }
 
@@ -233,8 +217,8 @@ int main(void) {
     
     // seed gen
     
-    // const int SEED = time(0) % 10000;
-    const int SEED = 6274;
+    const int SEED = time(0) % 10000;
+    // const int SEED = 6274;
     srand(SEED);
     
     int length = snprintf(NULL, 0,"SEED: %d", SEED) + 1;
