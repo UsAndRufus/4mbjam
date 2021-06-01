@@ -116,6 +116,23 @@ void validMovesFor(PieceDef pieceDef, int cell, int moves[TOTAL_CELLS], Piece pi
     }
 }
 
+// Updates
+int movePiece(int from, int to, Piece pieces[TOTAL_CELLS], Ruleset ruleset) {
+    Piece piece = pieces[from];
+    PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
+    
+    int validMoves[TOTAL_CELLS] = { 0 };
+    validMovesFor(pieceDef, from, validMoves, pieces);
+    
+    if (validMoves[to]) {
+        pieces[from] = (Piece) {0};
+        pieces[to] = piece;
+        return 1;
+    } else {
+        return 0; // move not valid
+    }
+}
+
 
 // Drawing
 
@@ -178,11 +195,11 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
         }
         
         // Draw cell numbers
-        // int length = snprintf(NULL, 0,"%d", cell) + 1;
-        // char cell_str[length];
-        // snprintf(cell_str, length, "%d", cell);
+        int length = snprintf(NULL, 0,"%d", cell) + 1;
+        char cell_str[length];
+        snprintf(cell_str, length, "%d", cell);
         
-        // DrawText(cell_str, center.x, center.y, TEXT_SIZE, WHITE); 
+        DrawText(cell_str, center.x, center.y, TEXT_SIZE, WHITE); 
     }
     
     // Draw selected piece so we can draw hints over the top of other pieces
@@ -205,7 +222,7 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
     }
 }
 
-void drawSidebar(char *seed_str) {
+void drawSidebar(char *seed_str, int selectedPiece) {
     DrawRectangle(SIDEBAR_X, SIDEBAR_Y, SIDEBAR_WIDTH, SIDEBAR_HEIGHT, SKYBLUE);
     
     int y = SIDEBAR_INNER_Y;
@@ -214,6 +231,13 @@ void drawSidebar(char *seed_str) {
     y += SIDEBAR_LINE_HEIGHT;
     
     DrawText(seed_str, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
+    y += SIDEBAR_LINE_HEIGHT;
+    
+    int length = snprintf(NULL, 0, "Selected: %d", selectedPiece) + 1;
+    char selectedPiece_str[length];
+    snprintf(selectedPiece_str, length, "Selected: %d", selectedPiece);
+    
+    DrawText(selectedPiece_str, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
 }
 
 
@@ -229,7 +253,7 @@ int main(void) {
     // const int SEED = 6274;
     srand(SEED);
     
-    int length = snprintf(NULL, 0,"SEED: %d", SEED) + 1;
+    int length = snprintf(NULL, 0, "SEED: %d", SEED) + 1;
     char seed_str[length];
     snprintf(seed_str, length, "SEED: %d", SEED);
     
@@ -248,6 +272,8 @@ int main(void) {
     initPieces(ruleset, pieces);
 
     Vector2 mousePoint = { 0.0f, 0.0f };
+    int mouseCell = -1;
+    int selectedPiece = -1;
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //---------------------------------------------------------------------------------------
@@ -260,8 +286,30 @@ int main(void) {
         mousePoint = GetMousePosition();
 
         for (int i = 0; i < TOTAL_CELLS; i++) {
-            if (CheckCollisionPointRec(mousePoint, cellRecs[i])) cellState[i] = 1;
-            else cellState[i] = 0;
+            if (CheckCollisionPointRec(mousePoint, cellRecs[i])) {
+                cellState[i] = 1;
+                mouseCell = i;
+            } else  {
+                cellState[i] = 0;
+            }
+        }
+        
+        if (pieces[mouseCell].present) {
+            SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+        } else {
+            SetMouseCursor(MOUSE_CURSOR_ARROW);
+        }
+        
+        
+        if (selectedPiece == -1 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && pieces[mouseCell].present) {
+            selectedPiece = mouseCell;
+        } else if (selectedPiece != -1 && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+            movePiece(selectedPiece, mouseCell, pieces, ruleset);
+            selectedPiece = -1;
+        }
+        
+        if (selectedPiece != -1) {
+            
         }
         
 
@@ -275,7 +323,7 @@ int main(void) {
 
             drawBoard(cellRecs, cellState, pieces, ruleset);
             
-            drawSidebar(seed_str);
+            drawSidebar(seed_str, selectedPiece);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
