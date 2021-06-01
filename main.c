@@ -168,27 +168,33 @@ Vector2 cellCenter(Rectangle cellRec) {
     return (Vector2) { cellRec.x + HALF_CELL_SIZE, cellRec.y + HALF_CELL_SIZE };
 }
 
-void drawMovementHint(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[TOTAL_CELLS]) {
+void drawMovementHint(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[TOTAL_CELLS], int moveTo) {
     for (int c = 0; c < TOTAL_CELLS; c++) {
+        Color color;
         if (moves[c]) {
-            drawArrowV(start, cellCenter(cellRecs[c]), LIME);
+            if (c == moveTo) {
+                color = MAROON;
+            } else {
+                color = LIME;
+            }
+            drawArrowV(start, cellCenter(cellRecs[c]), color);
         }
     }
 }
 
-void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset) {
+void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset, int selectedPiece) {
     drawGrid();
     
-    int selected = -1;
+    int mouseCell = -1;
   
     for (int cell = 0; cell < TOTAL_CELLS; cell++) {
-        if (cellState[cell]) selected = cell;
+        if (cellState[cell]) mouseCell = cell;
         
         Piece piece = pieces[cell];
         
         Vector2 center = cellCenter(cellRecs[cell]);
         
-        if (piece.present) {
+        if (piece.present && cell != selectedPiece && cell != mouseCell) {
             PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
             
             DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
@@ -202,21 +208,31 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
         DrawText(cell_str, center.x, center.y, TEXT_SIZE, WHITE); 
     }
     
-    // Draw selected piece so we can draw hints over the top of other pieces
-    if (selected != - 1) {
-        DrawRectangleRec(cellRecs[selected], LIME);
-        Piece piece = pieces[selected];
-        
-        if (piece.present) {
+    // Draw mouseover piece so we can draw hints over the top of other pieces
+    if (mouseCell != -1) {        
+        if (selectedPiece != -1) {
+            Piece piece = pieces[selectedPiece];
+            PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
+            
+            
+            Vector2 center = cellCenter(cellRecs[selectedPiece]);
+            
+            int validMoves[TOTAL_CELLS] = { 0 };
+            validMovesFor(pieceDef, selectedPiece, validMoves, pieces);
+            drawMovementHint(center, validMoves, cellRecs, mouseCell);
+            
+            Vector2 mousePoint = GetMousePosition();
+            DrawPoly(mousePoint, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
+        } else if (pieces[mouseCell].present) {
+            Piece piece = pieces[mouseCell];
             PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
             
             int validMoves[TOTAL_CELLS] = { 0 };
+            validMovesFor(pieceDef, mouseCell, validMoves, pieces);
             
-            validMovesFor(pieceDef, selected, validMoves, pieces);
+            Vector2 center = cellCenter(cellRecs[mouseCell]);
             
-            Vector2 center = cellCenter(cellRecs[selected]);
-            
-            drawMovementHint(center, validMoves, cellRecs);
+            drawMovementHint(center, validMoves, cellRecs, -1);
             DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
         }
     }
@@ -294,7 +310,7 @@ int main(void) {
             }
         }
         
-        if (pieces[mouseCell].present) {
+        if (pieces[mouseCell].present || selectedPiece != -1) {
             SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
         } else {
             SetMouseCursor(MOUSE_CURSOR_ARROW);
@@ -308,10 +324,6 @@ int main(void) {
             selectedPiece = -1;
         }
         
-        if (selectedPiece != -1) {
-            
-        }
-        
 
         //----------------------------------------------------------------------------------
 
@@ -321,7 +333,7 @@ int main(void) {
         
             ClearBackground(DARKBLUE);
 
-            drawBoard(cellRecs, cellState, pieces, ruleset);
+            drawBoard(cellRecs, cellState, pieces, ruleset, selectedPiece);
             
             drawSidebar(seed_str, selectedPiece);
 
