@@ -86,31 +86,48 @@ int cellOnBoard(int cell) {
     return cell >= 0 && cell < TOTAL_CELLS;
 }
 
+int movingIntoSamePlayerPiece(int from, int to, Piece pieces[TOTAL_CELLS]) {
+    return pieces[to].present && pieces[to].player == pieces[from].player;
+}
+
 
 // This needs to return a variable length array
 // We could just continue to calculate in the drawMovementHint function BUT this function will be useful for the bot and checking whether a player's move is valid
 // BUT if piece will never have more than 8 moves... we could just have an array initialised to size 8, elements at -1?
 void validMovesFor(PieceDef pieceDef, int cell, int moves[TOTAL_CELLS], Piece pieces[TOTAL_CELLS]) {
     switch(pieceDef.movementDirection) {
+        int target;
         case OMNI: 
         case ORTHOGONAL:
             // up and down
-            if (cellOnBoard(cell - CELLS)) moves[cell - CELLS] = 1;
-            if (cellOnBoard(cell + CELLS)) moves[cell + CELLS] = 1;
+            target = cell - CELLS;
+            if (cellOnBoard(target) && !movingIntoSamePlayerPiece(cell, target, pieces)) moves[target] = 1;
+            
+            target = cell + CELLS;
+            if (cellOnBoard(target) && !movingIntoSamePlayerPiece(cell, target, pieces)) moves[target] = 1;
             
             // left and right
-            if (cell % CELLS != 0) moves[cell - 1] = 1;
-            if ((cell + 1) % CELLS != 0) moves[cell + 1] = 1;
+            target = cell - 1;
+            if (cell % CELLS != 0 && !movingIntoSamePlayerPiece(cell, target, pieces)) moves[target] = 1;
+            
+            target = cell + 1;
+            if ((cell + 1) % CELLS != 0 && !movingIntoSamePlayerPiece(cell, target, pieces)) moves[target] = 1;
             
             if (pieceDef.movementDirection == ORTHOGONAL) break; // fall through if omni
         case DIAGONAL:
             // left-up and left-down
-            if (cell % CELLS != 0 && cellOnBoard(cell - CELLS - 1)) moves[cell - CELLS - 1] = 1;
-            if (cell % CELLS != 0 && cellOnBoard(cell + CELLS - 1)) moves[cell + CELLS - 1] = 1;
+            target = cell - CELLS - 1;
+            if (cell % CELLS != 0 && cellOnBoard(target) && !movingIntoSamePlayerPiece(cell, target, pieces)) moves[target] = 1;
+            
+            target = cell + CELLS - 1;
+            if (cell % CELLS != 0 && cellOnBoard(target) && !movingIntoSamePlayerPiece(cell, target, pieces)) moves[target] = 1;
             
             // right-up and right-down
-            if ((cell + 1) % CELLS != 0 && cellOnBoard(cell - CELLS + 1)) moves[cell - CELLS + 1] = 1;
-            if ((cell + 1) % CELLS != 0 && cellOnBoard(cell + CELLS + 1)) moves[cell + CELLS + 1] = 1;
+            target = cell - CELLS + 1;
+            if ((cell + 1) % CELLS != 0 && cellOnBoard(target) && !movingIntoSamePlayerPiece(cell, target, pieces)) moves[target] = 1;
+            
+            target = cell + CELLS + 1;
+            if ((cell + 1) % CELLS != 0 && cellOnBoard(target) && !movingIntoSamePlayerPiece(cell, target, pieces)) moves[target] = 1;
             
             break;
     }
@@ -194,7 +211,7 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
         
         Vector2 center = cellCenter(cellRecs[cell]);
         
-        if (piece.present && cell != selectedPiece && cell != mouseCell) {
+        if (piece.present && cell != selectedPiece) {
             PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
             
             DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
