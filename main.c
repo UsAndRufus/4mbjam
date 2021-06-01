@@ -199,6 +199,15 @@ void drawMovementHint(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[
     }
 }
 
+void drawValidMoves(Piece piece, int from, int target, Rectangle cellRecs[TOTAL_CELLS], Piece pieces[], Ruleset ruleset) {
+    PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
+    int validMoves[TOTAL_CELLS] = { 0 };
+    validMovesFor(pieceDef, from, validMoves, pieces);
+    
+    Vector2 center = cellCenter(cellRecs[from]);
+    drawMovementHint(center, validMoves, cellRecs, target);
+}
+
 void drawPiece(Piece piece, Vector2 center, Ruleset ruleset) {
     int sides = ruleset.pieceDefs[piece.pieceDef].sides;
     
@@ -206,60 +215,43 @@ void drawPiece(Piece piece, Vector2 center, Ruleset ruleset) {
     DrawPoly(center, sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
 }
 
-void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset, int selectedPiece) {
+void drawBoard(Rectangle cellRecs[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset, MouseState mouseState) {
     drawGrid();
-    
-    int mouseCell = -1;
   
     for (int cell = 0; cell < TOTAL_CELLS; cell++) {
-        if (cellState[cell]) mouseCell = cell;
-        
         Piece piece = pieces[cell];
         
         Vector2 center = cellCenter(cellRecs[cell]);
         
-        if (piece.present && cell != selectedPiece) {
-            PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
-            
-            DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
-        }
+        if (piece.present && cell != mouseState.selectedPiece) drawPiece(piece, center, ruleset);
         
         // Draw cell numbers
-        int length = snprintf(NULL, 0,"%d", cell) + 1;
-        char cell_str[length];
-        snprintf(cell_str, length, "%d", cell);
-        
-        DrawText(cell_str, center.x, center.y, TEXT_SIZE, WHITE); 
+        // int length = snprintf(NULL, 0,"%d", cell) + 1;
+        // char cell_str[length];
+        // snprintf(cell_str, length, "%d", cell);
+        // DrawText(cell_str, center.x, center.y, TEXT_SIZE, WHITE); 
     }
     
     // Draw mouseover piece so we can draw hints over the top of other pieces
-    if (mouseCell != -1) {        
-        if (selectedPiece != -1) {
-            Piece piece = pieces[selectedPiece];
+    if (mouseState.cell != -1) {        
+        if (mouseState.selectedPiece != -1) {
+            Piece piece = pieces[mouseState.selectedPiece];
             
-            PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
-            int validMoves[TOTAL_CELLS] = { 0 };
-            validMovesFor(pieceDef, selectedPiece, validMoves, pieces);
-            Vector2 center = cellCenter(cellRecs[selectedPiece]);
-            drawMovementHint(center, validMoves, cellRecs, mouseCell);
+            drawValidMoves(piece, mouseState.selectedPiece, mouseState.cell, cellRecs, pieces, ruleset);
             
-            Vector2 mousePoint = GetMousePosition();
-            drawPiece(piece, mousePoint, ruleset);
-        } else if (pieces[mouseCell].present) {
-            Piece piece = pieces[mouseCell];
+            drawPiece(piece, mouseState.position, ruleset);
+        } else if (pieces[mouseState.cell].present) {
+            Piece piece = pieces[mouseState.cell];
             
-            PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
-            int validMoves[TOTAL_CELLS] = { 0 };
-            validMovesFor(pieceDef, mouseCell, validMoves, pieces);
-            Vector2 center = cellCenter(cellRecs[mouseCell]);
-            drawMovementHint(center, validMoves, cellRecs, -1);
+            drawValidMoves(piece, mouseState.cell, -1, cellRecs, pieces, ruleset);
             
-           drawPiece(piece, center, ruleset);
+            Vector2 center = cellCenter(cellRecs[mouseState.cell]);
+            drawPiece(piece, center, ruleset);
         }
     }
 }
 
-void drawSidebar(char *seed_str, int selectedPiece) {
+void drawSidebar(char *seed_str, MouseState mouseState) {
     DrawRectangle(SIDEBAR_X, SIDEBAR_Y, SIDEBAR_WIDTH, SIDEBAR_HEIGHT, SKYBLUE);
     
     int y = SIDEBAR_INNER_Y;
@@ -270,9 +262,9 @@ void drawSidebar(char *seed_str, int selectedPiece) {
     DrawText(seed_str, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
     y += SIDEBAR_LINE_HEIGHT;
     
-    int length = snprintf(NULL, 0, "Selected: %d", selectedPiece) + 1;
+    int length = snprintf(NULL, 0, "Selected: %d", mouseState.selectedPiece) + 1;
     char selectedPiece_str[length];
-    snprintf(selectedPiece_str, length, "Selected: %d", selectedPiece);
+    snprintf(selectedPiece_str, length, "Selected: %d", mouseState.selectedPiece);
     
     DrawText(selectedPiece_str, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
 }
@@ -301,16 +293,13 @@ int main(void) {
     // Board
 
     Rectangle cellRecs[TOTAL_CELLS] = { 0 };     // Rectangles array
-    int cellState[TOTAL_CELLS] = { 0 };          // Cell state: 0-DEFAULT, 1-MOUSE_HOVER
 
     initBoard(cellRecs);
     
     Piece pieces[TOTAL_CELLS] = {0};
     initPieces(ruleset, pieces);
-
-    Vector2 mousePoint = { 0.0f, 0.0f };
-    int mouseCell = -1;
-    int selectedPiece = -1;
+    
+    MouseState mouseState = { -1, -1, (Vector2) { 0.0f, 0.0f } };
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //---------------------------------------------------------------------------------------
@@ -320,29 +309,28 @@ int main(void) {
         // Update
         //----------------------------------------------------------------------------------
 
-        mousePoint = GetMousePosition();
+        mouseState.position = GetMousePosition();
 
         for (int i = 0; i < TOTAL_CELLS; i++) {
-            if (CheckCollisionPointRec(mousePoint, cellRecs[i])) {
-                cellState[i] = 1;
-                mouseCell = i;
-            } else  {
-                cellState[i] = 0;
+            if (CheckCollisionPointRec(mouseState.position, cellRecs[i])) {
+                mouseState.cell = i;
+                break;
             }
+            mouseState.cell = -1;
         }
         
-        if (pieces[mouseCell].present || selectedPiece != -1) {
+        if (pieces[mouseState.cell].present || mouseState.selectedPiece != -1) {
             SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
         } else {
             SetMouseCursor(MOUSE_CURSOR_ARROW);
         }
         
         
-        if (selectedPiece == -1 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && pieces[mouseCell].present) {
-            selectedPiece = mouseCell;
-        } else if (selectedPiece != -1 && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
-            movePiece(selectedPiece, mouseCell, pieces, ruleset);
-            selectedPiece = -1;
+        if (mouseState.selectedPiece == -1 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && pieces[mouseState.cell].present) {
+            mouseState.selectedPiece = mouseState.cell;
+        } else if (mouseState.selectedPiece != -1 && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+            movePiece(mouseState.selectedPiece, mouseState.cell, pieces, ruleset);
+            mouseState.selectedPiece = -1;
         }
         
 
@@ -354,9 +342,9 @@ int main(void) {
         
             ClearBackground(DARKBLUE);
 
-            drawBoard(cellRecs, cellState, pieces, ruleset, selectedPiece);
+            drawBoard(cellRecs, pieces, ruleset, mouseState);
             
-            drawSidebar(seed_str, selectedPiece);
+            drawSidebar(seed_str, mouseState);
 
         EndDrawing();
         //----------------------------------------------------------------------------------

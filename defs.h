@@ -53,3 +53,9 @@ typedef struct Ruleset {
     Color colors[2]; // player colours
     PieceDef pieceDefs[N_PIECE_DEFS];
 } Ruleset;
+
+typedef struct MouseState {
+    int cell;
+    int selectedPiece;
+    Vector2 position;
+} MouseState;
