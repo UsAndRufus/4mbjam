@@ -199,6 +199,13 @@ void drawMovementHint(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[
     }
 }
 
+void drawPiece(Piece piece, Vector2 center, Ruleset ruleset) {
+    int sides = ruleset.pieceDefs[piece.pieceDef].sides;
+    
+    DrawPoly(center, sides, PIECE_RADIUS * 1.1, 180 * (piece.player), BLACK);
+    DrawPoly(center, sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
+}
+
 void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset, int selectedPiece) {
     drawGrid();
     
@@ -229,28 +236,25 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], int cellState[TOTAL_CELLS], Piec
     if (mouseCell != -1) {        
         if (selectedPiece != -1) {
             Piece piece = pieces[selectedPiece];
+            
             PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
-            
-            
-            Vector2 center = cellCenter(cellRecs[selectedPiece]);
-            
             int validMoves[TOTAL_CELLS] = { 0 };
             validMovesFor(pieceDef, selectedPiece, validMoves, pieces);
+            Vector2 center = cellCenter(cellRecs[selectedPiece]);
             drawMovementHint(center, validMoves, cellRecs, mouseCell);
             
             Vector2 mousePoint = GetMousePosition();
-            DrawPoly(mousePoint, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
+            drawPiece(piece, mousePoint, ruleset);
         } else if (pieces[mouseCell].present) {
             Piece piece = pieces[mouseCell];
-            PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
             
+            PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
             int validMoves[TOTAL_CELLS] = { 0 };
             validMovesFor(pieceDef, mouseCell, validMoves, pieces);
-            
             Vector2 center = cellCenter(cellRecs[mouseCell]);
-            
             drawMovementHint(center, validMoves, cellRecs, -1);
-            DrawPoly(center, pieceDef.sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
+            
+           drawPiece(piece, center, ruleset);
         }
     }
 }
