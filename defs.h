@@ -50,7 +50,7 @@ typedef struct Piece {
 typedef struct Ruleset {
     int numberOfPieceDefs; 
     int numberOfPieces; // all pieces across both players
-    Color colors[2]; // player colours
+    Color playerColors[2]; // player colours
     PieceDef pieceDefs[N_PIECE_DEFS];
 } Ruleset;
 
@@ -59,3 +59,8 @@ typedef struct MouseState {
     int selectedPiece;
     Vector2 position;
 } MouseState;
+
+typedef struct Turn {
+    int count;
+    int player;
+} Turn;

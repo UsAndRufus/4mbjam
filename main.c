@@ -41,8 +41,8 @@ Ruleset initRuleset() {
     int colorIds[2];
     choose(colorIds, 2, ARR_SIZE(playerColors));
     
-    ruleset.colors[0] = playerColors[colorIds[0]];
-    ruleset.colors[1] = playerColors[colorIds[1]];
+    ruleset.playerColors[0] = playerColors[colorIds[0]];
+    ruleset.playerColors[1] = playerColors[colorIds[1]];
        
     generatePieceDefs(&ruleset);
     
@@ -91,9 +91,8 @@ int movingIntoSamePlayerPiece(int from, int to, Piece pieces[TOTAL_CELLS]) {
 }
 
 
-// This needs to return a variable length array
-// We could just continue to calculate in the drawMovementHint function BUT this function will be useful for the bot and checking whether a player's move is valid
-// BUT if piece will never have more than 8 moves... we could just have an array initialised to size 8, elements at -1?
+// Assume we have max 8 valid moves
+// Doesn't care about turn - just shows possible moves for piece on owner's turn
 void validMovesFor(PieceDef pieceDef, int cell, int moves[TOTAL_CELLS], Piece pieces[TOTAL_CELLS]) {
     switch(pieceDef.movementDirection) {
         int target;
@@ -134,20 +133,25 @@ void validMovesFor(PieceDef pieceDef, int cell, int moves[TOTAL_CELLS], Piece pi
 }
 
 // Updates
-int movePiece(int from, int to, Piece pieces[TOTAL_CELLS], Ruleset ruleset) {
+int movePiece(int from, int to, Piece pieces[TOTAL_CELLS], Ruleset ruleset, Turn turn) {
     Piece piece = pieces[from];
     PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
     
     int validMoves[TOTAL_CELLS] = { 0 };
     validMovesFor(pieceDef, from, validMoves, pieces);
     
-    if (validMoves[to]) {
+    if (validMoves[to] && turn.player == piece.player) {
         pieces[from] = (Piece) {0};
         pieces[to] = piece;
         return 1;
     } else {
         return 0; // move not valid
     }
+}
+
+void nextTurn(Turn * turn) {
+    turn->player = turn->count % 2; // This seems like the wrong order to do it in, but we start at Turn 1, but players are represented as 0 & 1
+    turn->count = turn->count + 1;
 }
 
 
@@ -185,11 +189,13 @@ Vector2 cellCenter(Rectangle cellRec) {
     return (Vector2) { cellRec.x + HALF_CELL_SIZE, cellRec.y + HALF_CELL_SIZE };
 }
 
-void drawMovementHint(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[TOTAL_CELLS], int moveTo) {
+void drawMovementHint(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[TOTAL_CELLS], int moveTo, int available) {
     for (int c = 0; c < TOTAL_CELLS; c++) {
         Color color;
         if (moves[c]) {
-            if (c == moveTo) {
+            if (!available) {
+                color = SKYBLUE;
+            } else if (c == moveTo) {
                 color = MAROON;
             } else {
                 color = LIME;
@@ -199,23 +205,24 @@ void drawMovementHint(Vector2 start, int moves[TOTAL_CELLS], Rectangle cellRecs[
     }
 }
 
-void drawValidMoves(Piece piece, int from, int target, Rectangle cellRecs[TOTAL_CELLS], Piece pieces[], Ruleset ruleset) {
+void drawValidMoves(Piece piece, int from, int target, Rectangle cellRecs[TOTAL_CELLS], Piece pieces[], Ruleset ruleset, Turn turn) {
     PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
     int validMoves[TOTAL_CELLS] = { 0 };
     validMovesFor(pieceDef, from, validMoves, pieces);
     
     Vector2 center = cellCenter(cellRecs[from]);
-    drawMovementHint(center, validMoves, cellRecs, target);
+    int belongsToCurrentPlayer = turn.player == piece.player;
+    drawMovementHint(center, validMoves, cellRecs, target, belongsToCurrentPlayer);
 }
 
 void drawPiece(Piece piece, Vector2 center, Ruleset ruleset) {
     int sides = ruleset.pieceDefs[piece.pieceDef].sides;
     
     DrawPoly(center, sides, PIECE_RADIUS * 1.1, 180 * (piece.player), BLACK);
-    DrawPoly(center, sides, PIECE_RADIUS, 180 * (piece.player), ruleset.colors[piece.player]);
+    DrawPoly(center, sides, PIECE_RADIUS, 180 * (piece.player), ruleset.playerColors[piece.player]);
 }
 
-void drawBoard(Rectangle cellRecs[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset, MouseState mouseState) {
+void drawBoard(Rectangle cellRecs[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset, MouseState mouseState, Turn turn) {
     drawGrid();
   
     for (int cell = 0; cell < TOTAL_CELLS; cell++) {
@@ -237,13 +244,13 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Rules
         if (mouseState.selectedPiece != -1) {
             Piece piece = pieces[mouseState.selectedPiece];
             
-            drawValidMoves(piece, mouseState.selectedPiece, mouseState.cell, cellRecs, pieces, ruleset);
+            drawValidMoves(piece, mouseState.selectedPiece, mouseState.cell, cellRecs, pieces, ruleset, turn);
             
             drawPiece(piece, mouseState.position, ruleset);
         } else if (pieces[mouseState.cell].present) {
             Piece piece = pieces[mouseState.cell];
             
-            drawValidMoves(piece, mouseState.cell, -1, cellRecs, pieces, ruleset);
+            drawValidMoves(piece, mouseState.cell, -1, cellRecs, pieces, ruleset, turn);
             
             Vector2 center = cellCenter(cellRecs[mouseState.cell]);
             drawPiece(piece, center, ruleset);
@@ -251,7 +258,7 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Rules
     }
 }
 
-void drawSidebar(char *seed_str, MouseState mouseState) {
+void drawSidebar(char *seed_str, Ruleset ruleset, Turn turn) {
     DrawRectangle(SIDEBAR_X, SIDEBAR_Y, SIDEBAR_WIDTH, SIDEBAR_HEIGHT, SKYBLUE);
     
     int y = SIDEBAR_INNER_Y;
@@ -262,11 +269,19 @@ void drawSidebar(char *seed_str, MouseState mouseState) {
     DrawText(seed_str, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
     y += SIDEBAR_LINE_HEIGHT;
     
-    int length = snprintf(NULL, 0, "Selected: %d", mouseState.selectedPiece) + 1;
-    char selectedPiece_str[length];
-    snprintf(selectedPiece_str, length, "Selected: %d", mouseState.selectedPiece);
+    int length = snprintf(NULL, 0, "Turn %d", turn.count) + 1;
+    char turnCount[length];
+    snprintf(turnCount, length, "Turn %d", turn.count);
     
-    DrawText(selectedPiece_str, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
+    DrawText(turnCount, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
+    y += SIDEBAR_LINE_HEIGHT;
+    
+    length = snprintf(NULL, 0, "Player %d's turn", turn.player + 1) + 1;
+    char player[length];
+    snprintf(player, length, "Player %d's turn", turn.player + 1);
+    
+    DrawText(player, SIDEBAR_INNER_X, y, TEXT_SIZE, ruleset.playerColors[turn.player]); 
+    y += SIDEBAR_LINE_HEIGHT;
 }
 
 
@@ -296,10 +311,14 @@ int main(void) {
 
     initBoard(cellRecs);
     
-    Piece pieces[TOTAL_CELLS] = {0};
+    Piece pieces[TOTAL_CELLS] = { 0 };
     initPieces(ruleset, pieces);
     
+    Turn turn = { 1, 0 };
+    
     MouseState mouseState = { -1, -1, (Vector2) { 0.0f, 0.0f } };
+    
+    Piece mousePiece;
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //---------------------------------------------------------------------------------------
@@ -319,17 +338,24 @@ int main(void) {
             mouseState.cell = -1;
         }
         
-        if (pieces[mouseState.cell].present || mouseState.selectedPiece != -1) {
+        mousePiece = pieces[mouseState.cell];
+        
+        if (mouseState.selectedPiece != -1 || (mousePiece.present && mousePiece.player == turn.player)) {
             SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+        } else if (mousePiece.present && mousePiece.player != turn.player) {
+            SetMouseCursor(MOUSE_CURSOR_NOT_ALLOWED);  
         } else {
             SetMouseCursor(MOUSE_CURSOR_ARROW);
         }
         
         
-        if (mouseState.selectedPiece == -1 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && pieces[mouseState.cell].present) {
+        if (mouseState.selectedPiece == -1 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && mousePiece.present && mousePiece.player == turn.player) {
             mouseState.selectedPiece = mouseState.cell;
         } else if (mouseState.selectedPiece != -1 && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
-            movePiece(mouseState.selectedPiece, mouseState.cell, pieces, ruleset);
+            int moved = movePiece(mouseState.selectedPiece, mouseState.cell, pieces, ruleset, turn);
+            
+            if (moved) nextTurn(&turn);
+            
             mouseState.selectedPiece = -1;
         }
         
@@ -342,9 +368,9 @@ int main(void) {
         
             ClearBackground(DARKBLUE);
 
-            drawBoard(cellRecs, pieces, ruleset, mouseState);
+            drawBoard(cellRecs, pieces, ruleset, mouseState, turn);
             
-            drawSidebar(seed_str, mouseState);
+            drawSidebar(seed_str, ruleset, turn);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
