@@ -26,11 +26,12 @@ void generatePieceDefs(Ruleset *ruleset) {
     }
 }
 
-Ruleset initRuleset() {
+Ruleset initRuleset(int seed) {
     
     static Color playerColors[] = {VIOLET, MAROON, DARKGREEN, PINK, PURPLE, BEIGE};
     
     Ruleset ruleset = {
+        seed,
         N_PIECE_DEFS,
         N_PIECE_DEFS * 2, // total number of pieces
         {VIOLET, MAROON},
@@ -133,7 +134,7 @@ void validMovesFor(PieceDef pieceDef, int cell, int moves[TOTAL_CELLS], Piece pi
 }
 
 // Updates
-int movePiece(int from, int to, Piece pieces[TOTAL_CELLS], Ruleset ruleset, Turn turn) {
+Move movePiece(int from, int to, Piece pieces[TOTAL_CELLS], Ruleset ruleset, Turn turn) {
     Piece piece = pieces[from];
     PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
     
@@ -141,11 +142,12 @@ int movePiece(int from, int to, Piece pieces[TOTAL_CELLS], Ruleset ruleset, Turn
     validMovesFor(pieceDef, from, validMoves, pieces);
     
     if (validMoves[to] && turn.player == piece.player) {
+        Move result = pieces[to].present ? CAPTURE : MOVE;
         pieces[from] = (Piece) {0};
         pieces[to] = piece;
-        return 1;
+        return result;
     } else {
-        return 0; // move not valid
+        return NONE; // move not valid
     }
 }
 
@@ -258,7 +260,16 @@ void drawBoard(Rectangle cellRecs[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Rules
     }
 }
 
-void drawSidebar(char *seed_str, Ruleset ruleset, Turn turn) {
+int drawSidebarString(char * string, int n, Color color, int y) {
+    int length = snprintf(NULL, 0, string, n) + 1;
+    char str[length];
+    snprintf(str, length, string, n);
+    
+    DrawText(str, SIDEBAR_INNER_X, y, TEXT_SIZE, color); 
+    return y + SIDEBAR_LINE_HEIGHT;
+}
+
+void drawSidebar(Ruleset ruleset, int score[2], Turn turn) {
     DrawRectangle(SIDEBAR_X, SIDEBAR_Y, SIDEBAR_WIDTH, SIDEBAR_HEIGHT, SKYBLUE);
     
     int y = SIDEBAR_INNER_Y;
@@ -266,22 +277,14 @@ void drawSidebar(char *seed_str, Ruleset ruleset, Turn turn) {
     DrawFPS(SIDEBAR_INNER_X, y);
     y += SIDEBAR_LINE_HEIGHT;
     
-    DrawText(seed_str, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
-    y += SIDEBAR_LINE_HEIGHT;
+    y = drawSidebarString("SEED: %d", ruleset.seed, LIME, y);
     
-    int length = snprintf(NULL, 0, "Turn %d", turn.count) + 1;
-    char turnCount[length];
-    snprintf(turnCount, length, "Turn %d", turn.count);
+    y = drawSidebarString("Turn %d", turn.count, LIME, y);
     
-    DrawText(turnCount, SIDEBAR_INNER_X, y, TEXT_SIZE, LIME); 
-    y += SIDEBAR_LINE_HEIGHT;
-    
-    length = snprintf(NULL, 0, "Player %d's turn", turn.player + 1) + 1;
-    char player[length];
-    snprintf(player, length, "Player %d's turn", turn.player + 1);
-    
-    DrawText(player, SIDEBAR_INNER_X, y, TEXT_SIZE, ruleset.playerColors[turn.player]); 
-    y += SIDEBAR_LINE_HEIGHT;
+    // Highlight whose turn it is
+    DrawRectangle(SIDEBAR_X, y + (turn.player % 2) * SIDEBAR_LINE_HEIGHT, SIDEBAR_WIDTH, SIDEBAR_LINE_HEIGHT, LIME);
+    y = drawSidebarString("Player 1: %d", score[0], ruleset.playerColors[0], y);
+    y = drawSidebarString("Player 2: %d", score[1], ruleset.playerColors[1], y);
 }
 
 
@@ -297,13 +300,9 @@ int main(void) {
     // const int SEED = 6274;
     srand(SEED);
     
-    int length = snprintf(NULL, 0, "SEED: %d", SEED) + 1;
-    char seed_str[length];
-    snprintf(seed_str, length, "SEED: %d", SEED);
-    
     // Ruleset
     
-    Ruleset ruleset = initRuleset();
+    Ruleset ruleset = initRuleset(SEED);
     
     // Board
 
@@ -313,6 +312,8 @@ int main(void) {
     
     Piece pieces[TOTAL_CELLS] = { 0 };
     initPieces(ruleset, pieces);
+    
+    int score[2] = { 0 };
     
     Turn turn = { 1, 0 };
     
@@ -352,9 +353,16 @@ int main(void) {
         if (mouseState.selectedPiece == -1 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && mousePiece.present && mousePiece.player == turn.player) {
             mouseState.selectedPiece = mouseState.cell;
         } else if (mouseState.selectedPiece != -1 && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
-            int moved = movePiece(mouseState.selectedPiece, mouseState.cell, pieces, ruleset, turn);
+            Move move = movePiece(mouseState.selectedPiece, mouseState.cell, pieces, ruleset, turn);
             
-            if (moved) nextTurn(&turn);
+            switch(move) {
+                case CAPTURE:
+                    score[turn.player] += 1;
+                case MOVE:
+                    nextTurn(&turn);
+                default:
+                    break;
+            }
             
             mouseState.selectedPiece = -1;
         }
@@ -370,7 +378,7 @@ int main(void) {
 
             drawBoard(cellRecs, pieces, ruleset, mouseState, turn);
             
-            drawSidebar(seed_str, ruleset, turn);
+            drawSidebar(ruleset, score, turn);
 
         EndDrawing();
         //----------------------------------------------------------------------------------

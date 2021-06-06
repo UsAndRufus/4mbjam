@@ -48,6 +48,7 @@ typedef struct Piece {
 } Piece;
 
 typedef struct Ruleset {
+    int seed;
     int numberOfPieceDefs; 
     int numberOfPieces; // all pieces across both players
     Color playerColors[2]; // player colours
@@ -64,3 +65,9 @@ typedef struct Turn {
     int count;
     int player;
 } Turn;
+
+typedef enum Move {
+    NONE,
+    MOVE,
+    CAPTURE
+} Move;
