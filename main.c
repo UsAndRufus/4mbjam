@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+// maybe shouldn't include this
+#include <string.h>
 
 #include "raylib.h"
 #include "utility.h"
@@ -11,7 +13,7 @@
 
 void generatePieceDefs(Ruleset *ruleset) {
     int chosenSides[ruleset->numberOfPieceDefs];
-    choose(chosenSides, ruleset->numberOfPieceDefs, 4);
+    choose(chosenSides, ruleset->numberOfPieceDefs, N_PIECE_DEFS);
     
     for (int i = 0; i < ruleset->numberOfPieceDefs; i++) {
         // could define an alternate version of choose that defines a floor, but this is fine
@@ -26,6 +28,30 @@ void generatePieceDefs(Ruleset *ruleset) {
     }
 }
 
+void generateRules(Ruleset *ruleset) {
+    // applies to
+    int howMany = (rand() % ruleset->numberOfPieceDefs) + 1; 
+    int appliesTo[howMany];
+    choose(appliesTo, howMany, ruleset->numberOfPieceDefs);
+    
+    Rule rule = { 0 };
+    rule.appliesToCount = rand() % ruleset->numberOfPieceDefs + 1;
+    
+    choose(rule.appliesTo, rule.appliesToCount, ruleset->numberOfPieceDefs);
+    
+    rule.condition = (Condition) {
+        PIECE_ON_CELL_TYPE,
+        STONE
+    };
+    
+    rule.effectsCount = 2;
+    Effect effects[2] = { REMOVE_PIECE, ADD_POINT };
+    memcpy(rule.effects, effects, sizeof(effects));
+    
+   
+    ruleset->rule = rule;
+}
+
 Ruleset initRuleset(int seed) {
     
     static Color playerColors[] = {VIOLET, MAROON, DARKGREEN, PINK, PURPLE, BEIGE};
@@ -38,7 +64,6 @@ Ruleset initRuleset(int seed) {
         {}
     };
     
-    // Can implement a chooseColors function at some point if we need to do more of this
     int colorIds[2];
     choose(colorIds, 2, ARR_SIZE(playerColors));
     
@@ -46,6 +71,7 @@ Ruleset initRuleset(int seed) {
     ruleset.playerColors[1] = playerColors[colorIds[1]];
        
     generatePieceDefs(&ruleset);
+    generateRules(&ruleset);
     
     return ruleset;
 }
@@ -217,11 +243,19 @@ void drawValidMoves(Piece piece, int from, int target, Rectangle cellRecs[TOTAL_
     drawMovementHint(center, validMoves, cellRecs, target, belongsToCurrentPlayer);
 }
 
-void drawPiece(Piece piece, Vector2 center, Ruleset ruleset) {
-    int sides = ruleset.pieceDefs[piece.pieceDef].sides;
+void drawPieceDef(PieceDef pieceDef, Vector2 center, int radius, int angle, Color color) {
+    int sides = pieceDef.sides;
     
-    DrawPoly(center, sides, PIECE_RADIUS * 1.1, 180 * (piece.player), BLACK);
-    DrawPoly(center, sides, PIECE_RADIUS, 180 * (piece.player), ruleset.playerColors[piece.player]);
+    DrawPoly(center, sides, radius * 1.1, angle, BLACK);
+    DrawPoly(center, sides, radius, angle, color);
+}
+
+void drawPiece(Piece piece, Vector2 center, Ruleset ruleset) {
+    PieceDef pieceDef = ruleset.pieceDefs[piece.pieceDef];
+    int angle = 180 * (piece.player);
+    Color color = ruleset.playerColors[piece.player];
+    
+    drawPieceDef(pieceDef, center, PIECE_RADIUS, angle, color);
 }
 
 void drawBoard(Rectangle cellRecs[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset, MouseState mouseState, Turn turn) {
@@ -269,6 +303,77 @@ int drawSidebarString(char * string, int n, Color color, int y) {
     return y + SIDEBAR_LINE_HEIGHT;
 }
 
+int explainRule(Rule rule, Ruleset ruleset, Color color, int y) {
+    DrawText("RULE 1", SIDEBAR_INNER_X, y, TEXT_SIZE, color); 
+    y += SIDEBAR_LINE_HEIGHT;
+    
+    DrawText("When ", SIDEBAR_INNER_X, y, TEXT_SIZE, color); 
+    
+    int radius = 10;
+    int x = SIDEBAR_INNER_X + MeasureText("When ", TEXT_SIZE) + radius;
+    Vector2 center = { x, y + radius };
+    for (int i = 0; i < rule.appliesToCount; i++) {
+        PieceDef pieceDef = ruleset.pieceDefs[rule.appliesTo[i]];
+        drawPieceDef(pieceDef, center, radius, 180, BEIGE);
+        center.x += radius * 3;
+    }
+    
+    y += SIDEBAR_LINE_HEIGHT;
+    
+    DrawText("is ", SIDEBAR_INNER_X, y, TEXT_SIZE, color);
+    x = SIDEBAR_INNER_X + MeasureText("is ", TEXT_SIZE);
+    
+    switch(rule.condition.condition) {
+        case PIECE_ON_CELL_TYPE:
+            switch(rule.condition.appliesOn) {
+                case STONE:
+                    DrawText("on stone cell:", x, y, TEXT_SIZE, color);
+                    break;
+                case LAVA:
+                    DrawText("on lava cell:", x, y, TEXT_SIZE, color);
+                    break;
+            }
+            break;
+        default:
+            DrawText("BAD CONDITION", x, y, TEXT_SIZE, color);
+    }
+    
+    y += SIDEBAR_LINE_HEIGHT;
+    
+    
+    for (int i = 0; i < rule.effectsCount; i++) {
+        char * effect;
+        switch (rule.effects[i]) {
+            case REMOVE_PIECE:
+                effect = " - Remove piece";
+                break;
+            case ADD_POINT:
+                effect = " - Add point";
+                break;
+            case REMOVE_POINT:
+                effect = " - Lose point";
+                break;
+            default:
+                effect = "BAD EFFECT";
+        }
+        
+        DrawText(effect, x, y, TEXT_SIZE, color);
+        y += SIDEBAR_LINE_HEIGHT;
+    }
+    
+    return y;
+    
+}
+
+int drawRules(Ruleset ruleset, Color color, int y) {
+    DrawText("RULES", SIDEBAR_INNER_X, y, TEXT_SIZE, color); 
+    y += SIDEBAR_LINE_HEIGHT;
+    
+    y = explainRule(ruleset.rule, ruleset, color, y);
+    
+    return y;
+}
+
 void drawSidebar(Ruleset ruleset, int score[2], Turn turn) {
     DrawRectangle(SIDEBAR_X, SIDEBAR_Y, SIDEBAR_WIDTH, SIDEBAR_HEIGHT, SKYBLUE);
     
@@ -285,6 +390,8 @@ void drawSidebar(Ruleset ruleset, int score[2], Turn turn) {
     DrawRectangle(SIDEBAR_X, y + (turn.player % 2) * SIDEBAR_LINE_HEIGHT, SIDEBAR_WIDTH, SIDEBAR_LINE_HEIGHT, LIME);
     y = drawSidebarString("Player 1: %d", score[0], ruleset.playerColors[0], y);
     y = drawSidebarString("Player 2: %d", score[1], ruleset.playerColors[1], y);
+    
+    y = drawRules(ruleset, LIME, y);
 }
 
 

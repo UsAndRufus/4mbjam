@@ -1,5 +1,5 @@
 // Board
-#define CELLS 6
+#define CELLS 7
 #define TOTAL_CELLS (CELLS * CELLS)
 #define HOME_CELLS (CELLS * 2)
 #define CELL_SIZE 100
@@ -9,7 +9,7 @@
 #define BORDER 20
 
 // Pieces
-#define N_PIECE_DEFS 3 // at some point this should be dynamic
+#define N_PIECE_DEFS 4 // at some point this should be dynamic
 #define PIECE_RADIUS ((0.8 * CELL_SIZE) - HALF_CELL_SIZE)
 
 // Sidebar
@@ -47,12 +47,44 @@ typedef struct Piece {
     int pieceDef; // Index into array of piece definitons in Ruleset
 } Piece;
 
+typedef enum CellType {
+    STONE,
+    LAVA
+} CellType;
+
+typedef enum ECondition {
+    PIECE_ON_CELL_TYPE
+} ECondition;
+
+
+typedef struct Condition {
+    ECondition condition; // the actual condition
+    CellType appliesOn; // the cell type it applies to
+} Condition;
+
+typedef enum Effect {
+    REMOVE_PIECE,
+    ADD_POINT,
+    REMOVE_POINT
+} Effect;
+
+// will this let us model restrictions - piece can NOT move on lava
+// could model that as CAN move into all other types though
+typedef struct Rule {
+    int appliesToCount;
+    int appliesTo[N_PIECE_DEFS]; // who does this rule apply to
+    Condition condition; // when does this rule apply
+    int effectsCount;
+    Effect effects[5]; // what happens when this rule applies
+} Rule;
+
 typedef struct Ruleset {
     int seed;
     int numberOfPieceDefs; 
     int numberOfPieces; // all pieces across both players
     Color playerColors[2]; // player colours
     PieceDef pieceDefs[N_PIECE_DEFS];
+    Rule rule; // just one for now
 } Ruleset;
 
 typedef struct MouseState {
