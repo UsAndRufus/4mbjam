@@ -48,6 +48,7 @@ typedef struct Piece {
 } Piece;
 
 typedef enum CellType {
+    PLAIN,
     STONE,
     LAVA
 } CellType;
@@ -84,6 +85,7 @@ typedef struct Ruleset {
     int numberOfPieces; // all pieces across both players
     Color playerColors[2]; // player colours
     PieceDef pieceDefs[N_PIECE_DEFS];
+    CellType cellTypes[TOTAL_CELLS];
     Rule rule; // just one for now
 } Ruleset;
 

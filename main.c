@@ -47,8 +47,28 @@ void generateRules(Ruleset *ruleset) {
     ruleset->rule = rule;
 }
 
-Ruleset initRuleset(int seed) {
+void generateCellTypes(Ruleset *ruleset) {
+    for (int i = 0; i < TOTAL_CELLS; i++) {
+        ruleset->cellTypes[i] = NONE;
+    }
     
+    int positions[2];
+    choose(positions, 2, HOME_CELLS);
+    
+    int position;
+    for (int i = 0; i < 2; i++) {
+        position = positions[i] + HOME_CELLS;
+        if (i % 2 == 0) {
+            ruleset->cellTypes[position] = LAVA;
+            ruleset->cellTypes[ROTATE(position)] = LAVA;
+        } else {
+            ruleset->cellTypes[position] = STONE;
+            ruleset->cellTypes[ROTATE(position)] = STONE;
+        }
+    }
+}
+
+Ruleset generateRuleset(int seed) {
     static Color playerColors[] = {VIOLET, MAROON, DARKGREEN, PINK, PURPLE, BEIGE};
     
     Ruleset ruleset = {
@@ -67,6 +87,8 @@ Ruleset initRuleset(int seed) {
        
     generatePieceDefs(&ruleset);
     generateRules(&ruleset);
+    generateCellTypes(&ruleset);
+    
     
     return ruleset;
 }
@@ -91,7 +113,7 @@ void initPieces(Ruleset ruleset, Piece pieces[]) {
         for (int player = 0; player < 2; player++) {
             // rotate positions
             if (player == 1) {
-                position = TOTAL_CELLS - position - 1;
+                position = ROTATE(position);
             }        
             
             pieces[position] = (Piece) {
@@ -180,7 +202,22 @@ void nextTurn(Turn * turn) {
 
 // Drawing
 
-void drawGrid() {
+void drawGrid(Rectangle cellRecs[TOTAL_CELLS], Ruleset ruleset) {
+    
+    
+    for (int i = 0; i <= TOTAL_CELLS; i++) {
+        switch(ruleset.cellTypes[i]) {
+            case STONE:
+                DrawRectangleRec(cellRecs[i], GRAY);
+                break;
+            case LAVA:
+                DrawRectangleRec(cellRecs[i], RED);
+                break;
+            default:
+                break;
+        }   
+    }
+    
     for (int i = BORDER; i <= BOARD_BOUNDARY; i += CELL_SIZE + 1) {
         DrawLine(i, BORDER, i, BOARD_BOUNDARY, SKYBLUE);
         DrawLine(BORDER, i, BOARD_BOUNDARY - 1, i, SKYBLUE);
@@ -254,7 +291,7 @@ void drawPiece(Piece piece, Vector2 center, Ruleset ruleset) {
 }
 
 void drawBoard(Rectangle cellRecs[TOTAL_CELLS], Piece pieces[TOTAL_CELLS], Ruleset ruleset, MouseState mouseState, Turn turn) {
-    drawGrid();
+    drawGrid(cellRecs, ruleset);
   
     for (int cell = 0; cell < TOTAL_CELLS; cell++) {
         Piece piece = pieces[cell];
@@ -426,7 +463,7 @@ int main(void) {
     
     // Ruleset
     
-    Ruleset ruleset = initRuleset(SEED);
+    Ruleset ruleset = generateRuleset(SEED);
     
     // Board
 
