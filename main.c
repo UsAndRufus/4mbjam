@@ -203,8 +203,6 @@ void nextTurn(Turn * turn) {
 // Drawing
 
 void drawGrid(Rectangle cellRecs[TOTAL_CELLS], Ruleset ruleset) {
-    
-    
     for (int i = 0; i <= TOTAL_CELLS; i++) {
         switch(ruleset.cellTypes[i]) {
             case STONE:
@@ -397,7 +395,12 @@ int explainRule(Rule rule, Ruleset ruleset, Color color, int y) {
     
 }
 
-int drawRules(Ruleset ruleset, Color color, int y) {
+int drawRules(Ruleset ruleset, Color color, int y, int applies) {
+    if (applies) {
+        color = PURPLE;
+    }
+    
+    
     DrawText("RULES", SIDEBAR_INNER_X, y, TEXT_SIZE, color); 
     y += SIDEBAR_LINE_HEIGHT;
     
@@ -406,7 +409,7 @@ int drawRules(Ruleset ruleset, Color color, int y) {
     return y;
 }
 
-void drawSidebar(Ruleset ruleset, int score[2], Turn turn) {
+void drawSidebar(Ruleset ruleset, int score[2], Turn turn, int applies) {
     DrawRectangle(SIDEBAR_X, SIDEBAR_Y, SIDEBAR_WIDTH, SIDEBAR_HEIGHT, SKYBLUE);
     
     int y = SIDEBAR_INNER_Y;
@@ -423,7 +426,7 @@ void drawSidebar(Ruleset ruleset, int score[2], Turn turn) {
     y = drawSidebarString("Player 1: %d", score[0], ruleset.playerColors[0], y);
     y = drawSidebarString("Player 2: %d", score[1], ruleset.playerColors[1], y);
     
-    y = drawRules(ruleset, LIME, y);
+    y = drawRules(ruleset, LIME, y, applies);
 }
 
 Piece mouseover(MouseState * mouseState, Rectangle * cellRecs, Piece * pieces, Turn turn) {
@@ -481,6 +484,9 @@ int main(void) {
     MouseState mouseState = { -1, -1, (Vector2) { 0.0f, 0.0f } };
     
     Piece mousePiece;
+    
+    // for testing
+    int applies = 0;
 
     SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
     //---------------------------------------------------------------------------------------
@@ -510,6 +516,27 @@ int main(void) {
                     break;
             }
             
+            // rules only apply after a move, even if on your next turn they still apply
+            applies = 0;
+            for (int i = 0; i < ruleset.rule.appliesToCount; i++) {
+                if (ruleset.rule.appliesTo[i] == pieces[mouseState.selectedPiece].pieceDef) {
+                    switch(ruleset.rule.condition.condition) {
+                        case PIECE_ON_CELL_TYPE:
+                            if (ruleset.rule.condition.appliesOn == ruleset.cellTypes[mouseState.cell]) {
+                                printf("rule applies to %d", i);
+                                applies = 1;
+                                break;
+                            }
+                        default:
+                            break;
+                    }
+                }
+                
+                if (applies == 1) {
+                    break;
+                }
+            }
+            
             mouseState.selectedPiece = -1;
         }
         
@@ -524,7 +551,7 @@ int main(void) {
 
             drawBoard(cellRecs, pieces, ruleset, mouseState, turn);
             
-            drawSidebar(ruleset, score, turn);
+            drawSidebar(ruleset, score, turn, applies);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
