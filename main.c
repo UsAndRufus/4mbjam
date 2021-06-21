@@ -537,6 +537,26 @@ int main(void) {
                 }
             }
             
+            if (applies) {
+                for (int i = 0; i < ruleset.rule.effectsCount; i++) {
+                    Effect effect = ruleset.rule.effects[i];
+                    
+                    switch (effect) {
+                        case REMOVE_PIECE:
+                            pieces[mouseState.cell].present = 0;
+                            break;
+                        case ADD_POINT:
+                            score[turn.player] += 1;
+                            break;
+                        case REMOVE_POINT:
+                            score[turn.player] -= 1;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            
             mouseState.selectedPiece = -1;
         }
         
