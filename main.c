@@ -29,11 +29,6 @@ void generatePieceDefs(Ruleset *ruleset) {
 }
 
 void generateRules(Ruleset *ruleset) {
-    // applies to
-    int howMany = (rand() % ruleset->numberOfPieceDefs) + 1; 
-    int appliesTo[howMany];
-    choose(appliesTo, howMany, ruleset->numberOfPieceDefs);
-    
     Rule rule = { 0 };
     rule.appliesToCount = rand() % ruleset->numberOfPieceDefs + 1;
     
@@ -46,7 +41,7 @@ void generateRules(Ruleset *ruleset) {
     
     rule.effectsCount = 2;
     Effect effects[2] = { REMOVE_PIECE, ADD_POINT };
-    memcpy(rule.effects, effects, sizeof(effects));
+    memcpy(rule.effects, effects, sizeof(effects)); // probably bad use of this, idk
     
    
     ruleset->rule = rule;
@@ -394,6 +389,28 @@ void drawSidebar(Ruleset ruleset, int score[2], Turn turn) {
     y = drawRules(ruleset, LIME, y);
 }
 
+Piece mouseover(MouseState * mouseState, Rectangle * cellRecs, Piece * pieces, Turn turn) {
+    for (int i = 0; i < TOTAL_CELLS; i++) {
+        if (CheckCollisionPointRec(mouseState->position, cellRecs[i])) {
+            mouseState->cell = i;
+            break;
+        }
+        mouseState->cell = -1;
+    }
+    
+    Piece mousePiece = pieces[mouseState->cell];
+    
+    if (mouseState->selectedPiece != -1 || (mousePiece.present && mousePiece.player == turn.player)) {
+        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    } else if (mousePiece.present && mousePiece.player != turn.player) {
+        SetMouseCursor(MOUSE_CURSOR_NOT_ALLOWED);  
+    } else {
+        SetMouseCursor(MOUSE_CURSOR_ARROW);
+    }
+    
+    return mousePiece;
+}
+
 
 int main(void) {
     // Initialization
@@ -438,25 +455,10 @@ int main(void) {
 
         mouseState.position = GetMousePosition();
 
-        for (int i = 0; i < TOTAL_CELLS; i++) {
-            if (CheckCollisionPointRec(mouseState.position, cellRecs[i])) {
-                mouseState.cell = i;
-                break;
-            }
-            mouseState.cell = -1;
-        }
         
-        mousePiece = pieces[mouseState.cell];
+        mousePiece = mouseover(&mouseState, cellRecs, pieces, turn);
         
-        if (mouseState.selectedPiece != -1 || (mousePiece.present && mousePiece.player == turn.player)) {
-            SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
-        } else if (mousePiece.present && mousePiece.player != turn.player) {
-            SetMouseCursor(MOUSE_CURSOR_NOT_ALLOWED);  
-        } else {
-            SetMouseCursor(MOUSE_CURSOR_ARROW);
-        }
-        
-        
+        // Piece move
         if (mouseState.selectedPiece == -1 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && mousePiece.present && mousePiece.player == turn.player) {
             mouseState.selectedPiece = mouseState.cell;
         } else if (mouseState.selectedPiece != -1 && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
